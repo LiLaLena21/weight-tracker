@@ -387,8 +387,11 @@
       </div>
       <div class="ms-grid" id="msInputs"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.6rem;margin-bottom:0.5rem">
-        <span style="font-size:0.72rem;color:var(--muted)">Alle Werte in cm. Leere Felder bleiben unverändert.</span>
-        <button class="btn" onclick="addMeasurement()">Eintragen</button>
+        <span style="font-size:0.72rem;color:var(--muted)" id="msFormHint">Alle Werte in cm. Leere Felder bleiben unverändert.</span>
+        <div style="display:flex;gap:0.4rem">
+          <button class="btn-sm" id="msCancelBtn" style="display:none" onclick="cancelMeasureEdit()">Abbrechen</button>
+          <button class="btn" id="msSaveBtn" onclick="addMeasurement()">Eintragen</button>
+        </div>
       </div>
 
       <div class="ms-chart-head">
@@ -1137,10 +1140,54 @@ async function loadMeasurements() {
   updateMeasure();
 }
 
+// Bearbeiten: Eintrag ins Formular laden, Datum und Werte änderbar
+let msEditDate = null;
+function editMeasurement(date) {
+  const m = measurements.find(x => x.date === date);
+  if (!m) return;
+  msEditDate = date;
+  document.getElementById('msDate').value = date;
+  msActive().forEach(f => { document.getElementById('ms_' + f.key).value = m[f.key] == null ? '' : m[f.key]; });
+  document.getElementById('msSaveBtn').textContent = 'Speichern';
+  document.getElementById('msCancelBtn').style.display = '';
+  document.getElementById('msFormHint').textContent = 'Eintrag vom ' + formatDate(date) + ' bearbeiten. Leere Felder werden gelöscht.';
+  document.getElementById('msDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function cancelMeasureEdit() {
+  msEditDate = null;
+  msActive().forEach(f => { document.getElementById('ms_' + f.key).value = ''; });
+  document.getElementById('msDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('msSaveBtn').textContent = 'Eintragen';
+  document.getElementById('msCancelBtn').style.display = 'none';
+  document.getElementById('msFormHint').textContent = 'Alle Werte in cm. Leere Felder bleiben unverändert.';
+}
+async function saveMeasureEdit(date) {
+  const orig = measurements.find(x => x.date === msEditDate) || {};
+  const row = { date };
+  MS_FIELDS.forEach(f => { row[f.key] = orig[f.key] == null ? null : orig[f.key]; });  // ausgeblendete Maße bleiben erhalten
+  msActive().forEach(f => {
+    const v = parseFloat(document.getElementById('ms_' + f.key).value);
+    row[f.key] = isNaN(v) ? null : v;
+  });
+  if (MS_FIELDS.every(f => row[f.key] == null)) { alert('Bitte mindestens einen Wert eintragen.'); return; }
+  const moved = date !== msEditDate;
+  if (moved && measurements.some(x => x.date === date) &&
+      !confirm('Am ' + formatDate(date) + ' gibt es schon einen Eintrag. Überschreiben?')) return;
+  const { error } = await sb.from('body_measurements').upsert(row, { onConflict: 'date' });
+  if (error) { alert('Speichern fehlgeschlagen: ' + error.message); return; }
+  if (moved) {
+    const { error: e2 } = await sb.from('body_measurements').delete().eq('date', msEditDate);
+    if (e2) alert('Der alte Eintrag konnte nicht gelöscht werden: ' + e2.message);
+  }
+  cancelMeasureEdit();
+  loadMeasurements();
+}
+
 async function addMeasurement() {
   if (!sb) return;
   const date = document.getElementById('msDate').value;
   if (!date) return;
+  if (msEditDate) return saveMeasureEdit(date);
   const row = { date };
   let any = false;
   msActive().forEach(f => {
@@ -1209,7 +1256,7 @@ function updateMeasure() {
         for (let i = idx - 1; i >= 0; i--) if (measurements[i][f.key] != null) { prev = measurements[i][f.key]; break; }
         return `<td class="kg">${msFmt(m[f.key])}${prev != null ? msDelta(m[f.key] - prev) : ''}</td>`;
       }).join('');
-      return `<tr><td>${formatDate(m.date)}</td>${cells}<td><button class="btn-sm" onclick="removeMeasurement('${m.date}')">✕</button></td></tr>`;
+      return `<tr><td>${formatDate(m.date)}</td>${cells}<td style="white-space:nowrap"><button class="btn-sm" onclick="editMeasurement('${m.date}')">✎</button> <button class="btn-sm" onclick="removeMeasurement('${m.date}')">✕</button></td></tr>`;
     }).join('');
     tbl.innerHTML = head + '<tbody>' + rows + '</tbody>';
   }
