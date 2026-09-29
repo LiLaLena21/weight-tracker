@@ -172,6 +172,14 @@
     background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px;
     padding: 0.6rem; margin-top: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; color: var(--text);
   }
+  .ms-pick { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+  .ms-chip {
+    display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none;
+    border: 1px solid var(--border); border-radius: 999px; padding: 0.3rem 0.75rem;
+    font-size: 0.78rem; color: var(--muted); background: var(--card2);
+  }
+  .ms-chip input { display: none; }
+  .ms-chip.on { border-color: var(--actual); color: var(--text); background: rgba(232,131,90,0.12); }
   .opt-row { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; cursor: pointer; }
   .opt-row input { width: auto; accent-color: var(--actual); }
   @media (max-width: 560px) {
@@ -331,7 +339,11 @@
       <div id="cycleTable"></div>
     </div>
     <div class="tab-content" id="tab-measure">
-      <h2>Körpermaße</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;margin-bottom:1rem">
+        <h2 style="margin:0">Körpermaße</h2>
+        <button class="btn-sm" onclick="msTogglePick()">Maße auswählen</button>
+      </div>
+      <div id="msPick" class="ms-pick" style="display:none"></div>
       <div id="msSetup" class="ms-setup" style="display:none"></div>
       <div class="ms-figure">
         <div class="ms-img-wrap">
@@ -1026,14 +1038,47 @@ let msEnabled = false;
 let msTableMissing = false;
 let msImgUrl = null;
 
+// Welche Maße angezeigt werden, merkt sich der Browser (wt_measure_fields).
+// In der Datenbank bleiben alle Spalten, ausgeblendete Werte gehen also nicht verloren.
+const MS_DEFAULT_FIELDS = ['bust','waist','hip','thigh','calf'];
+function msSelected() {
+  const raw = retrieve('wt_measure_fields');
+  const keys = raw ? raw.split(',').filter(k => MS_FIELDS.some(f => f.key === k)) : MS_DEFAULT_FIELDS;
+  return keys.length ? keys : MS_DEFAULT_FIELDS;
+}
+function msActive() { const sel = msSelected(); return MS_FIELDS.filter(f => sel.includes(f.key)); }
+function msTogglePick() {
+  const el = document.getElementById('msPick');
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+function msRenderPick() {
+  const sel = msSelected();
+  document.getElementById('msPick').innerHTML = MS_FIELDS.map(f =>
+    `<label class="ms-chip${sel.includes(f.key) ? ' on' : ''}"><input type="checkbox" ${sel.includes(f.key) ? 'checked' : ''} onchange="msPickChange('${f.key}', this.checked)">${f.label}</label>`
+  ).join('');
+}
+function msPickChange(key, on) {
+  let sel = msSelected().filter(k => k !== key);
+  if (on) sel.push(key);
+  if (!sel.length) { msRenderPick(); return; }  // mindestens ein Maß bleibt aktiv
+  sel = MS_FIELDS.map(f => f.key).filter(k => sel.includes(k));
+  store('wt_measure_fields', sel.join(','));
+  msBuildInputs();
+  updateMeasure();
+}
+
 function msBuildInputs() {
-  document.getElementById('msInputs').innerHTML = MS_FIELDS.map(f =>
+  msRenderPick();
+  const prevChart = document.getElementById('msChartField').value;
+  document.getElementById('msInputs').innerHTML = msActive().map(f =>
     `<div class="input-group"><label>${f.label}</label><input type="number" id="ms_${f.key}" step="0.5" min="10" max="250" placeholder="cm"></div>`
   ).join('');
-  document.getElementById('msChartField').innerHTML = MS_FIELDS.map(f =>
+  const act = msActive();
+  document.getElementById('msChartField').innerHTML = act.map(f =>
     `<option value="${f.key}">${f.label}</option>`).join('');
-  document.getElementById('msChartField').value = 'waist';
-  document.getElementById('msDate').value = new Date().toISOString().slice(0,10);
+  const want = act.some(f => f.key === prevChart) ? prevChart : (act.some(f => f.key === 'waist') ? 'waist' : act[0].key);
+  document.getElementById('msChartField').value = want;
+  if (!document.getElementById('msDate').value) document.getElementById('msDate').value = new Date().toISOString().slice(0,10);
 }
 
 function toggleMeasureFeature(on) {
@@ -1073,7 +1118,7 @@ async function addMeasurement() {
   if (!date) return;
   const row = { date };
   let any = false;
-  MS_FIELDS.forEach(f => {
+  msActive().forEach(f => {
     const v = parseFloat(document.getElementById('ms_' + f.key).value);
     if (!isNaN(v)) { row[f.key] = v; any = true; }
   });
@@ -1081,7 +1126,7 @@ async function addMeasurement() {
   // Nur ausgefüllte Spalten werden geschickt, bestehende Werte am selben Tag bleiben erhalten
   const { error } = await sb.from('body_measurements').upsert(row, { onConflict: 'date' });
   if (error) { alert('Speichern fehlgeschlagen: ' + error.message); return; }
-  MS_FIELDS.forEach(f => { document.getElementById('ms_' + f.key).value = ''; });
+  msActive().forEach(f => { document.getElementById('ms_' + f.key).value = ''; });
   loadMeasurements();
 }
 
@@ -1113,7 +1158,7 @@ function updateMeasure() {
   }
 
   // Aktuelle Werte mit Veränderung seit der ersten Messung
-  const vals = MS_FIELDS.map(f => {
+  const vals = msActive().map(f => {
     const s = msSeries(f.key);
     if (!s.length) return `<div class="ms-pill"><span class="ms-name">${f.label}</span><span class="ms-val" style="color:var(--muted)">–</span></div>`;
     const last = s[s.length - 1], first = s[0];
@@ -1129,10 +1174,10 @@ function updateMeasure() {
   if (!measurements.length) {
     tbl.innerHTML = `<tr><td class="empty-state">Noch keine Maße eingetragen</td></tr>`;
   } else {
-    const head = `<thead><tr><th>Datum</th>${MS_FIELDS.map(f => `<th>${f.label}</th>`).join('')}<th></th></tr></thead>`;
-    const rows = [...measurements].reverse().map(m => {
+    const head = `<thead><tr><th>Datum</th>${msActive().map(f => `<th>${f.label}</th>`).join('')}<th></th></tr></thead>`;
+    const rows = [...measurements].reverse().filter(m => msActive().some(f => m[f.key] != null)).map(m => {
       const idx = measurements.indexOf(m);
-      const cells = MS_FIELDS.map(f => {
+      const cells = msActive().map(f => {
         if (m[f.key] == null) return '<td style="color:var(--muted)">–</td>';
         let prev = null;
         for (let i = idx - 1; i >= 0; i--) if (measurements[i][f.key] != null) { prev = measurements[i][f.key]; break; }
