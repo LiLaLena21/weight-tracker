@@ -82,6 +82,7 @@
     width: 100%; outline: none; transition: border-color 0.2s;
   }
   input:focus { border-color: var(--actual); }
+  input[type="date"] { color-scheme: dark; cursor: pointer; }
 
   .btn {
     background: var(--actual); color: #fff; border: none; border-radius: 8px;
@@ -1032,6 +1033,10 @@ function render() {
   if (msEnabled) drawMeasureChart();
 }
 
+// Datumsfelder: Kalender beim Antippen direkt öffnen (manche Handy-Browser markieren sonst nur die Jahreszahl)
+document.querySelectorAll('input[type="date"]').forEach(el => {
+  el.addEventListener('click', () => { try { el.showPicker(); } catch(e) {} });
+});
 document.getElementById('inputDate').value = new Date().toISOString().slice(0,10);
 document.getElementById('eventDate').value = new Date().toISOString().slice(0,10);
 window.addEventListener('resize', render);
