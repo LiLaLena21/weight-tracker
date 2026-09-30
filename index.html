@@ -1115,7 +1115,7 @@ function drawChart() {
   const minKg = Math.min(...allKg, g2, g1) - 1;
   const kgRange = maxKg - minKg;
 
-  const ml = 52, mr = 16, mt = 20, mb = 40;
+  const ml = 52, mr = 16, mt = activeTab === 'event' ? 50 : 20, mb = 40;
   const cW = W - ml - mr, cH = H - mt - mb;
 
   function xOf(d) { return ml + ((d - firstDate) / 86400000 / totalDays) * cW; }
@@ -1241,29 +1241,47 @@ function drawChart() {
   endDot(trendPts, '#e05a8a', minGoal+' kg');
   endDot(prognosePts, '#5ab5a0', minGoal+' kg');
 
-  if (activeTab === 'event') sortedEvents().forEach((ev, idx) => {
-    const evD = parseDate(ev.date);
-    const x = xOf(evD);
-    if (x < ml || x > ml+cW) return;
-    ctx.save(); ctx.strokeStyle = '#f0c060'; ctx.lineWidth = 1.5;
-    ctx.setLineDash([4,3]); ctx.globalAlpha = 0.7;
-    ctx.beginPath(); ctx.moveTo(x, mt); ctx.lineTo(x, mt+cH); ctx.stroke(); ctx.restore();
-    const trendKg = rate > 0 ? projectedKg(last.kg, last.date, ev.date, rate) : null;
-    const proKg = projectedKg(last.kg, last.date, ev.date, getConservativeRate());
-    if (trendKg !== null && trendKg >= minKg && trendKg <= maxKg) {
-      ctx.save(); ctx.fillStyle='#242018'; ctx.strokeStyle='#e05a8a'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(x, yOf(trendKg), 4, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
-    }
-    if (proKg >= minKg && proKg <= maxKg) {
-      ctx.save(); ctx.fillStyle='#242018'; ctx.strokeStyle='#5ab5a0'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(x, yOf(proKg), 4, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
-    }
-    const labelY = idx % 2 === 0 ? mt + 12 : mt + 24;
-    ctx.save(); ctx.fillStyle = '#f0c060'; ctx.font = 'bold 9px DM Sans,sans-serif';
-    ctx.textAlign = 'center'; ctx.globalAlpha = 0.9;
-    const label = ev.name.length > 14 ? ev.name.slice(0,13)+'…' : ev.name;
-    ctx.fillText(label, x, labelY); ctx.restore();
-  });
+  // Events: vergangene als Punkt auf der echten Kurve, kommende mit Trend-Punkt (konservativ nur dezent).
+  // Namen nur, wenn Platz ist, damit sich nichts überlagert.
+  if (activeTab === 'event') {
+    const rowEnd = [-Infinity, -Infinity];
+    ctx.save(); ctx.font = '600 9px DM Sans,sans-serif';
+    sortedEvents().forEach(ev => {
+      const x = xOf(parseDate(ev.date));
+      if (x < ml || x > ml+cW) return;
+      const past = ev.date <= last.date;
+      ctx.save(); ctx.strokeStyle = '#f0c060'; ctx.lineWidth = 1; ctx.setLineDash([3,3]); ctx.globalAlpha = 0.35;
+      ctx.beginPath(); ctx.moveTo(x, 30); ctx.lineTo(x, mt+cH); ctx.stroke(); ctx.restore();
+      if (past) {
+        const w = s.filter(e => e.date <= ev.date).pop();
+        if (w) {
+          ctx.save(); ctx.fillStyle = '#f0c060'; ctx.strokeStyle = '#1f1b16'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(x, yOf(w.kg), 4.5, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
+        }
+      } else {
+        const proKg = projectedKg(last.kg, last.date, ev.date, getConservativeRate());
+        if (proKg >= minKg && proKg <= maxKg) {
+          ctx.save(); ctx.globalAlpha = 0.45; ctx.fillStyle = '#5ab5a0';
+          ctx.beginPath(); ctx.arc(x, yOf(proKg), 2.5, 0, Math.PI*2); ctx.fill(); ctx.restore();
+        }
+        const trendKg = rate > 0 ? projectedKg(last.kg, last.date, ev.date, rate) : null;
+        if (trendKg !== null && trendKg >= minKg && trendKg <= maxKg) {
+          ctx.save(); ctx.fillStyle = '#f0c060'; ctx.strokeStyle = '#e05a8a'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(x, yOf(trendKg), 4.5, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
+        }
+      }
+      const label = ev.name.length > 12 ? ev.name.slice(0,11)+'…' : ev.name;
+      const tw = ctx.measureText(label).width;
+      const lx = Math.min(Math.max(x, ml + tw/2), ml + cW - tw/2);
+      const row = [0, 1].find(r => lx - tw/2 > rowEnd[r] + 6);
+      if (row !== undefined) {
+        rowEnd[row] = lx + tw/2;
+        ctx.fillStyle = past ? 'rgba(240,192,96,0.6)' : '#f0c060'; ctx.textAlign = 'center';
+        ctx.fillText(label, lx, 11 + row * 12);
+      }
+    });
+    ctx.restore();
+  }
 
   ctx.save(); ctx.strokeStyle='#e8835a'; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.globalAlpha=0.3;
   ctx.beginPath(); ctx.moveTo(xOf(lastDate),mt); ctx.lineTo(xOf(lastDate),mt+cH); ctx.stroke(); ctx.restore();
