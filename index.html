@@ -265,6 +265,21 @@
   .hero .goal-name b { font-size: 1rem; }
   .hero .goal-dates { margin-top: 0.45rem; display: flex; gap: 1rem; font-size: 0.78rem; }
   .hero .goal-dates span.dot { margin-right: 0.3rem; }
+  .ms-figure.has-img .ms-img-wrap { max-width: 300px; }
+  .ms-img-actions { justify-content: center; }
+  .ms-add-toggle {
+    width: 100%; padding: 0.7rem; border-radius: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    border: 1px dashed rgba(232,131,90,0.55); background: rgba(232,131,90,0.06); color: var(--actual); font-size: 0.88rem; font-weight: 500;
+  }
+  .ms-form { background: var(--glass); border: 1px solid var(--border); border-radius: 16px; padding: 0.9rem; }
+  .ms-list { display: flex; flex-direction: column; gap: 0.45rem; }
+  .ms-entry { display: flex; gap: 0.6rem; align-items: flex-start; background: var(--glass); border: 1px solid var(--border); border-radius: 14px; padding: 0.6rem 0.75rem; }
+  .ms-entry-date { font-size: 0.8rem; min-width: 4.4rem; padding-top: 0.15rem; }
+  .ms-entry-vals { flex: 1; display: flex; flex-wrap: wrap; gap: 0.25rem 0.8rem; font-size: 0.8rem; }
+  .ms-entry-vals span { white-space: nowrap; }
+  .ms-entry-vals .n { color: var(--muted); font-size: 0.72rem; margin-right: 0.2rem; }
+  .ms-entry-vals b { font-family: 'Lora', serif; font-weight: 500; }
+  .ms-entry-act { display: flex; gap: 0.3rem; }
   .menu-goals { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.5rem; }
   .menu-goals .input-group:last-child { grid-column: 1 / -1; }
   .goal-item { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.6rem; }
@@ -527,23 +542,24 @@
         <div class="ms-img-wrap">
           <div id="msImgBox"></div>
           <div class="ms-img-actions">
-            <button class="btn-sm" onclick="document.getElementById('msImgInput').click()" id="msImgBtn">Bild hochladen</button>
-            <button class="btn-sm" onclick="msToggleEdit()" id="msPosBtn" style="display:none">Positionen anpassen</button>
-            <button class="btn-sm" onclick="removeMeasureImage()" id="msImgRemove" style="display:none">Entfernen</button>
+            <button class="btn-sm" onclick="document.getElementById('msImgInput').click()" id="msImgBtn">Eigenes Bild</button>
+            <button class="btn-sm" onclick="msToggleEdit()" id="msPosBtn" style="display:none">Positionen</button>
+            <button class="btn-sm" onclick="removeMeasureImage()" id="msImgRemove" style="display:none">Standardbild</button>
           </div>
           <input type="file" id="msImgInput" accept="image/*" style="display:none" onchange="onMeasureImage(this)">
         </div>
         <div class="ms-values" id="msValues"></div>
       </div>
 
-      <div class="input-row" style="margin-bottom:0.6rem">
-        <div class="input-group" style="max-width:180px"><label>Datum</label><input type="date" id="msDate"></div>
-      </div>
-      <div class="ms-grid" id="msInputs"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.6rem;margin-bottom:0.5rem">
-        <span style="font-size:0.72rem;color:var(--muted)" id="msFormHint">Alle Werte in cm. Leere Felder bleiben unverändert.</span>
-        <div style="display:flex;gap:0.4rem">
-          <button class="btn-sm" id="msCancelBtn" style="display:none" onclick="cancelMeasureEdit()">Abbrechen</button>
+      <button class="ms-add-toggle" id="msAddToggle" onclick="msToggleForm()">＋ Neue Messung</button>
+      <div class="ms-form" id="msForm" style="display:none">
+        <div class="input-row" style="margin-bottom:0.6rem">
+          <div class="input-group" style="max-width:200px"><label>Datum</label><input type="date" id="msDate"></div>
+        </div>
+        <div class="ms-grid" id="msInputs"></div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.6rem" id="msFormHint">Alle Werte in cm. Leere Felder bleiben unverändert.</div>
+        <div style="display:flex;gap:0.5rem;justify-content:flex-end">
+          <button class="btn-sm" id="msCancelBtn" onclick="cancelMeasureEdit()">Abbrechen</button>
           <button class="btn" id="msSaveBtn" onclick="addMeasurement()">Eintragen</button>
         </div>
       </div>
@@ -552,10 +568,10 @@
         <span class="events-section-title" style="margin:0">Verlauf</span>
         <select id="msChartField" onchange="drawMeasureChart()"></select>
       </div>
-      <canvas id="msChart" height="220"></canvas>
+      <canvas id="msChart" height="180"></canvas>
 
       <div class="events-section-title">Alle Messungen</div>
-      <div style="overflow-x:auto"><table class="data-table" id="msTable"></table></div>
+      <div id="msTable" class="ms-list"></div>
     </div>
   </div>
 
@@ -1298,7 +1314,9 @@ const MS_FIELDS = [
   { key:'bust',      label:'Brust' },
   { key:'underbust', label:'Unterbrust' },
   { key:'waist',     label:'Taille' },
+  { key:'belly',     label:'Bauch' },
   { key:'hip',       label:'Hüfte' },
+  { key:'arm',       label:'Oberarm' },
   { key:'thigh',     label:'Oberschenkel' },
   { key:'knee',      label:'Knie' },
   { key:'calf',      label:'Wade' },
@@ -1306,14 +1324,18 @@ const MS_FIELDS = [
 const MS_SQL = `create table if not exists body_measurements (
   id bigint generated always as identity primary key,
   date date not null unique,
-  shoulder numeric, bust numeric, underbust numeric, waist numeric,
-  hip numeric, thigh numeric, knee numeric, calf numeric,
+  shoulder numeric, bust numeric, underbust numeric, waist numeric, belly numeric,
+  hip numeric, arm numeric, thigh numeric, knee numeric, calf numeric,
   created_at timestamptz default now()
 );
 alter table body_measurements enable row level security;
 create policy "allow all" on body_measurements
   for all to anon using (true) with check (true);`;
 
+// Für Tabellen, die vor Bauch/Oberarm angelegt wurden
+const MS_SQL_ALTER = `alter table body_measurements
+  add column if not exists belly numeric,
+  add column if not exists arm numeric;`;
 let measurements = [];
 let msEnabled = false;
 let msTableMissing = false;
@@ -1321,11 +1343,15 @@ let msImgUrl = null;
 
 // Welche Maße angezeigt werden, merkt sich der Browser (wt_measure_fields).
 // In der Datenbank bleiben alle Spalten, ausgeblendete Werte gehen also nicht verloren.
-const MS_DEFAULT_FIELDS = ['bust','waist','hip','thigh','calf'];
+// Standard je nach Geschlecht: Frauen eher Taille, Männer eher Bauchumfang
+const MS_DEFAULT_FIELDS_W = ['bust','waist','hip','thigh','calf'];
+const MS_DEFAULT_FIELDS_M = ['bust','belly','hip','arm','thigh'];
+function msGender() { return (userProfile && userProfile.gender === 'm') ? 'm' : 'w'; }
+function msDefaultFields() { return msGender() === 'm' ? MS_DEFAULT_FIELDS_M : MS_DEFAULT_FIELDS_W; }
 function msSelected() {
   const raw = retrieve('wt_measure_fields');
-  const keys = raw ? raw.split(',').filter(k => MS_FIELDS.some(f => f.key === k)) : MS_DEFAULT_FIELDS;
-  return keys.length ? keys : MS_DEFAULT_FIELDS;
+  const keys = raw ? raw.split(',').filter(k => MS_FIELDS.some(f => f.key === k)) : msDefaultFields();
+  return keys.length ? keys : msDefaultFields();
 }
 function msActive() { const sel = msSelected(); return MS_FIELDS.filter(f => sel.includes(f.key)); }
 function msTogglePick() {
@@ -1357,7 +1383,8 @@ function msBuildInputs() {
   const act = msActive();
   document.getElementById('msChartField').innerHTML = act.map(f =>
     `<option value="${f.key}">${f.label}</option>`).join('');
-  const want = act.some(f => f.key === prevChart) ? prevChart : (act.some(f => f.key === 'waist') ? 'waist' : act[0].key);
+  const pref = ['waist', 'belly'].find(k => act.some(f => f.key === k));
+  const want = act.some(f => f.key === prevChart) ? prevChart : (pref || act[0].key);
   document.getElementById('msChartField').value = want;
   if (!document.getElementById('msDate').value) document.getElementById('msDate').value = new Date().toISOString().slice(0,10);
 }
@@ -1399,10 +1426,10 @@ function editMeasurement(date) {
   const m = measurements.find(x => x.date === date);
   if (!m) return;
   msEditDate = date;
+  msToggleForm(true);
   document.getElementById('msDate').value = date;
   msActive().forEach(f => { document.getElementById('ms_' + f.key).value = m[f.key] == null ? '' : m[f.key]; });
   document.getElementById('msSaveBtn').textContent = 'Speichern';
-  document.getElementById('msCancelBtn').style.display = '';
   document.getElementById('msFormHint').textContent = 'Eintrag vom ' + formatDate(date) + ' bearbeiten. Leere Felder werden gelöscht.';
   document.getElementById('msDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -1411,7 +1438,7 @@ function cancelMeasureEdit() {
   msActive().forEach(f => { document.getElementById('ms_' + f.key).value = ''; });
   document.getElementById('msDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('msSaveBtn').textContent = 'Eintragen';
-  document.getElementById('msCancelBtn').style.display = 'none';
+  msToggleForm(false);
   document.getElementById('msFormHint').textContent = 'Alle Werte in cm. Leere Felder bleiben unverändert.';
 }
 async function saveMeasureEdit(date) {
@@ -1427,7 +1454,7 @@ async function saveMeasureEdit(date) {
   if (moved && measurements.some(x => x.date === date) &&
       !confirm('Am ' + formatDate(date) + ' gibt es schon einen Eintrag. Überschreiben?')) return;
   const { error } = await sb.from('body_measurements').upsert(row, { onConflict: 'date' });
-  if (error) { alert('Speichern fehlgeschlagen: ' + error.message); return; }
+  if (error) { msSaveError(error); return; }
   if (moved) {
     const { error: e2 } = await sb.from('body_measurements').delete().eq('date', msEditDate);
     if (e2) alert('Der alte Eintrag konnte nicht gelöscht werden: ' + e2.message);
@@ -1450,9 +1477,31 @@ async function addMeasurement() {
   if (!any) return;
   // Nur ausgefüllte Spalten werden geschickt, bestehende Werte am selben Tag bleiben erhalten
   const { error } = await sb.from('body_measurements').upsert(row, { onConflict: 'date' });
-  if (error) { alert('Speichern fehlgeschlagen: ' + error.message); return; }
+  if (error) { msSaveError(error); return; }
   msActive().forEach(f => { document.getElementById('ms_' + f.key).value = ''; });
+  msToggleForm(false);
   loadMeasurements();
+}
+
+function msSaveError(error) {
+  const missingCol = /column|belly|arm|PGRST204/i.test((error.code || '') + ' ' + (error.message || ''));
+  if (missingCol) {
+    const box = document.getElementById('msSetup');
+    box.style.display = 'block';
+    box.innerHTML = `<b>Einmalig nachrüsten:</b> Deiner Tabelle fehlen die neuen Maße Bauch und Oberarm.
+      Im Supabase <b>SQL Editor</b> einfügen, <b>Run</b>, dann nochmal speichern.<pre>${MS_SQL_ALTER}</pre>
+      <button class="btn-sm" style="margin-top:0.5rem" onclick="navigator.clipboard.writeText(MS_SQL_ALTER);this.textContent='Kopiert ✓'">SQL kopieren</button>`;
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else {
+    alert('Speichern fehlgeschlagen: ' + error.message);
+  }
+}
+function msToggleForm(force) {
+  const form = document.getElementById('msForm');
+  const open = force === undefined ? form.style.display === 'none' : force;
+  form.style.display = open ? 'block' : 'none';
+  document.getElementById('msAddToggle').style.display = open ? 'none' : '';
+  if (open) document.getElementById('msDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 async function removeMeasurement(date) {
@@ -1495,23 +1544,22 @@ function updateMeasure() {
   document.getElementById('msValues').innerHTML = vals +
     (firstDate && measurements.length > 1 ? `<div style="font-size:0.7rem;color:var(--muted);padding:0.2rem 0.9rem">Veränderung seit ${formatDate(firstDate)}</div>` : '');
 
-  // Tabelle
-  const tbl = document.getElementById('msTable');
-  if (!measurements.length) {
-    tbl.innerHTML = `<tr><td class="empty-state">Noch keine Maße eingetragen</td></tr>`;
+  // Liste der Messungen (kompakt, bricht auf dem Handy um statt seitlich zu scrollen)
+  const list = document.getElementById('msTable');
+  const rows = [...measurements].reverse().filter(m => msActive().some(f => m[f.key] != null));
+  if (!rows.length) {
+    list.innerHTML = `<div class="empty-state">Noch keine Maße eingetragen</div>`;
   } else {
-    const head = `<thead><tr><th>Datum</th>${msActive().map(f => `<th>${f.label}</th>`).join('')}<th></th></tr></thead>`;
-    const rows = [...measurements].reverse().filter(m => msActive().some(f => m[f.key] != null)).map(m => {
+    list.innerHTML = rows.map(m => {
       const idx = measurements.indexOf(m);
-      const cells = msActive().map(f => {
-        if (m[f.key] == null) return '<td style="color:var(--muted)">–</td>';
+      const vals = msActive().filter(f => m[f.key] != null).map(f => {
         let prev = null;
         for (let i = idx - 1; i >= 0; i--) if (measurements[i][f.key] != null) { prev = measurements[i][f.key]; break; }
-        return `<td class="kg">${msFmt(m[f.key])}${prev != null ? msDelta(m[f.key] - prev) : ''}</td>`;
+        return `<span><span class="n">${f.label}</span><b>${msFmt(m[f.key])}</b>${prev != null ? msDelta(m[f.key] - prev) : ''}</span>`;
       }).join('');
-      return `<tr><td>${formatDate(m.date)}</td>${cells}<td style="white-space:nowrap"><button class="btn-sm" onclick="editMeasurement('${m.date}')">✎</button> <button class="btn-sm" onclick="removeMeasurement('${m.date}')">✕</button></td></tr>`;
+      return `<div class="ms-entry"><div class="ms-entry-date">${formatDate(m.date)}</div><div class="ms-entry-vals">${vals}</div>
+        <div class="ms-entry-act"><button class="btn-sm" onclick="editMeasurement('${m.date}')">✎</button><button class="btn-sm" onclick="removeMeasurement('${m.date}')">✕</button></div></div>`;
     }).join('');
-    tbl.innerHTML = head + '<tbody>' + rows + '</tbody>';
   }
   drawMeasureChart();
 }
@@ -1521,7 +1569,7 @@ function drawMeasureChart() {
   if (!canvas || !msEnabled || activeTab !== 'measure') return;
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.parentElement.clientWidth - 40;
-  const H = 220;
+  const H = 180;
   canvas.width = W * dpr; canvas.height = H * dpr;
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
@@ -1608,13 +1656,29 @@ const MS_POS_DEFAULT = {
   thigh:     { y: 1250/2048, x1: 362/1143, x2: 565/1143 },
   knee:      { y: 1490/2048, x1: 398/1143, x2: 545/1143 },
   calf:      { y: 1580/2048, x1: 405/1143, x2: 535/1143 },
+  belly:     { y: 880/2048,  x1: 420/1143, x2: 725/1143 },
+  arm:       { y: 640/2048,  x1: 330/1143, x2: 395/1143 },
+};
+// Standardpositionen für die Männerfigur (img/figur-m.jpg)
+const MS_POS_DEFAULT_M = {
+  shoulder:  { y: 470/2000,  x1: 330/1116, x2: 790/1116 },
+  bust:      { y: 640/2000,  x1: 380/1116, x2: 785/1116 },
+  underbust: { y: 700/2000,  x1: 392/1116, x2: 800/1116 },
+  arm:       { y: 735/2000,  x1: 283/1116, x2: 386/1116 },
+  belly:     { y: 830/2000,  x1: 392/1116, x2: 808/1116 },
+  waist:     { y: 905/2000,  x1: 395/1116, x2: 725/1116 },
+  hip:       { y: 1010/2000, x1: 378/1116, x2: 742/1116 },
+  thigh:     { y: 1170/2000, x1: 382/1116, x2: 556/1116 },
+  knee:      { y: 1450/2000, x1: 392/1116, x2: 548/1116 },
+  calf:      { y: 1560/2000, x1: 394/1116, x2: 542/1116 },
 };
 let msEditing = false;
 function msPositions() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem('wt_measure_pos') || '{}'); } catch(e) {}
   const out = {};
-  MS_FIELDS.forEach(f => { out[f.key] = Object.assign({}, MS_POS_DEFAULT[f.key], saved[f.key] || {}); });
+  const base = msGender() === 'm' ? MS_POS_DEFAULT_M : MS_POS_DEFAULT;
+  MS_FIELDS.forEach(f => { out[f.key] = Object.assign({}, base[f.key], saved[f.key] || {}); });
   return out;
 }
 function msSavePos(key, y) {
@@ -1675,20 +1739,27 @@ function msRenderOverlay() {
   });
 }
 
+// Ohne eigenes Bild wird das Standardbild passend zum Geschlecht aus dem Profil gezeigt
 function showMeasureImage(blob) {
-  if (msImgUrl) URL.revokeObjectURL(msImgUrl);
-  msImgUrl = blob ? URL.createObjectURL(blob) : null;
-  document.getElementById('msImgBox').innerHTML = msImgUrl
-    ? `<div class="ms-stage"><img src="${msImgUrl}" alt="Deine Figur"><div class="ms-ov" id="msOverlay"></div></div>
-       <div class="ms-edit-hint" id="msSince"></div>
-       <div class="ms-edit-hint" id="msEditHint" style="display:none">Linien nach oben oder unten ziehen. <a href="#" onclick="msResetPos();return false" style="color:var(--actual)">Zurücksetzen</a></div>`
-    : `<div class="ms-img-empty">Lade hier ein Bild deiner Figur hoch.<br>Es bleibt nur auf diesem Gerät gespeichert.</div>`;
-  document.getElementById('msImgBtn').textContent = msImgUrl ? 'Bild ändern' : 'Bild hochladen';
-  document.getElementById('msImgRemove').style.display = msImgUrl ? '' : 'none';
-  document.getElementById('msPosBtn').style.display = msImgUrl ? '' : 'none';
-  document.getElementById('msFigure').classList.toggle('has-img', !!msImgUrl);
-  if (!msImgUrl) { msEditing = false; document.getElementById('msPosBtn').textContent = 'Positionen anpassen'; }
+  if (msImgUrl && msImgUrl.startsWith('blob:')) URL.revokeObjectURL(msImgUrl);
+  const own = !!blob;
+  msImgUrl = own ? URL.createObjectURL(blob) : `img/figur-${msGender()}.jpg`;
+  document.getElementById('msImgBox').innerHTML =
+    `<div class="ms-stage"><img src="${msImgUrl}" alt="Figur" onerror="msImgFailed()"><div class="ms-ov" id="msOverlay"></div></div>
+     <div class="ms-edit-hint" id="msSince"></div>
+     <div class="ms-edit-hint" id="msEditHint" style="display:none">Linien nach oben oder unten ziehen. <a href="#" onclick="msResetPos();return false" style="color:var(--actual)">Zurücksetzen</a></div>`;
+  document.getElementById('msImgBtn').textContent = own ? 'Bild ändern' : 'Eigenes Bild';
+  document.getElementById('msImgRemove').style.display = own ? '' : 'none';
+  document.getElementById('msPosBtn').style.display = '';
+  document.getElementById('msFigure').classList.add('has-img');
   msRenderOverlay();
+}
+function msImgFailed() {
+  // Standardbild nicht vorhanden: Upload-Hinweis statt leerer Fläche
+  document.getElementById('msImgBox').innerHTML = `<div class="ms-img-empty">Lade hier ein Bild deiner Figur hoch.<br>Es bleibt nur auf diesem Gerät gespeichert.</div>`;
+  document.getElementById('msPosBtn').style.display = 'none';
+  document.getElementById('msFigure').classList.remove('has-img');
+  msEditing = false;
 }
 async function loadMeasureImage() {
   try { showMeasureImage(await msImgGet()); } catch(e) { console.warn(e); showMeasureImage(null); }
@@ -1712,7 +1783,7 @@ function onMeasureImage(input) {
   img.src = URL.createObjectURL(file);
 }
 async function removeMeasureImage() {
-  if (!confirm('Bild von diesem Gerät entfernen?')) return;
+  if (!confirm('Eigenes Bild entfernen und wieder das Standardbild nutzen?')) return;
   try { await msImgSet(null); } catch(e) {}
   showMeasureImage(null);
 }
