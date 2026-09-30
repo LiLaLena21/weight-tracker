@@ -311,6 +311,17 @@
   .gd-cons { font-size: 0.68rem; color: var(--muted); opacity: 0.85; }
   .ev-cons { font-size: 0.68rem; color: var(--muted); }
   .ev-del { padding: 0.15rem 0.45rem; }
+  .kc-src { font-size: 0.68rem; color: var(--muted); background: var(--glass); border: 1px solid var(--border); border-radius: 999px; padding: 0.15rem 0.6rem; }
+  .kc-src:empty { display: none; }
+  .kc-leg { display: flex; gap: 0.8rem; flex-wrap: wrap; font-size: 0.68rem; color: var(--muted); margin: 0.3rem 0 0.4rem; }
+  .kc-leg i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 0.3rem; vertical-align: -1px; }
+  .kc-bucket { display: flex; align-items: center; gap: 0.7rem; background: var(--glass); border: 1px solid var(--border); border-radius: 14px; padding: 0.6rem 0.75rem; margin-bottom: 0.45rem; }
+  .kc-bucket .bk { width: 6.2rem; font-size: 0.8rem; } .kc-bucket .bk small { display: block; color: var(--muted); font-size: 0.66rem; }
+  .kc-bucket .bar { flex: 1; height: 7px; background: var(--border); border-radius: 9px; overflow: hidden; }
+  .kc-bucket .bar i { display: block; height: 100%; border-radius: 9px; }
+  .kc-bucket .bv { width: 4.6rem; text-align: right; font-family: 'Lora', serif; font-size: 0.9rem; }
+  .kc-tip { font-size: 0.8rem; line-height: 1.45; background: rgba(90,181,160,0.08); border: 1px solid rgba(90,181,160,0.3); border-radius: 14px; padding: 0.65rem 0.8rem; margin-top: 0.3rem; }
+  .kc-tip b { color: var(--goal1); }
   .menu-goals { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.5rem; }
   .menu-goals .input-group:last-child { grid-column: 1 / -1; }
   .goal-item { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.6rem; }
@@ -527,6 +538,7 @@
       <button class="tab" onclick="switchTab('event', this)">📅 Event</button>
       <button class="tab" onclick="switchTab('cycle', this)">🔄 Zyklus</button>
       <button class="tab" id="tabBtnMeasure" style="display:none" onclick="switchTab('measure', this)">📏 Maße</button>
+      <button class="tab" id="tabBtnKcal" style="display:none" onclick="switchTab('kcal', this)">🔥 kcal</button>
     </div>
     <div class="tab-content active" id="tab-weight">
       <h2>Messung eintragen</h2>
@@ -601,6 +613,29 @@
       <div class="events-section-title">Alle Messungen</div>
       <div id="msTable" class="ms-list"></div>
     </div>
+    <div class="tab-content" id="tab-kcal">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;margin-bottom:0.3rem">
+        <h2 style="margin:0">Kalorien</h2>
+        <span class="kc-src" id="kcSource"></span>
+      </div>
+      <div class="ms-edit-hint" style="text-align:left;margin:0 0 0.9rem">Was du an einem Tag gegessen hast. Die App vergleicht das mit deinem Gewichtsverlauf.</div>
+      <div id="kcSetup" class="ms-setup" style="display:none"></div>
+      <div class="input-row">
+        <div class="input-group"><label>Tag</label><input type="date" id="kcDate"></div>
+        <div class="input-group"><label>kcal</label><input type="number" id="kcValue" step="10" min="0" max="10000" placeholder="z.B. 1450"></div>
+        <button class="btn" onclick="addKcal()">Eintragen</button>
+      </div>
+
+      <div class="ms-chart-head"><span class="events-section-title" style="margin:0">Letzte 6 Wochen</span></div>
+      <canvas id="kcChart" height="260"></canvas>
+      <div class="kc-leg"><span><i style="background:#5ab5a0"></i>deutlich drunter</span><span><i style="background:#f0c060"></i>knapp drunter</span><span><i style="background:#e05a5a"></i>drüber</span></div>
+
+      <div class="events-section-title">Was bei dir funktioniert</div>
+      <div id="kcInsight"></div>
+
+      <div class="events-section-title">Einträge</div>
+      <div id="kcList" class="ms-list"></div>
+    </div>
   </div>
 
 </div>
@@ -626,6 +661,10 @@
   <label class="menu-item">
     <span><span class="menu-ico">📏</span>Körpermaße<small>Umfänge mit Verlauf, eigenes Bild</small></span>
     <input type="checkbox" class="switch" id="optMeasure" onchange="toggleMeasureFeature(this.checked)">
+  </label>
+  <label class="menu-item">
+    <span><span class="menu-ico">🔥</span>Kalorien<small>Tageskalorien neben dem Gewicht, mit Auswertung</small></span>
+    <input type="checkbox" class="switch" id="optKcal" onchange="toggleKcalFeature(this.checked)">
   </label>
   <div class="menu-foot">Die Auswahl gilt nur für dieses Gerät.</div>
 </aside>
@@ -1363,6 +1402,7 @@ function renderDebounced() { clearTimeout(renderTimer); renderTimer = setTimeout
 function render() {
   updateStats(); updateTable(); updateEventTable(); updateGoalBadges(); updateCycleTable(); drawChart();
   if (msEnabled) drawMeasureChart();
+  if (kcEnabled) drawKcalChart();
 }
 
 // Datumsfelder: Kalender beim Antippen direkt öffnen (manche Handy-Browser markieren sonst nur die Jahreszahl)
@@ -1856,6 +1896,223 @@ async function removeMeasureImage() {
   showMeasureImage(null);
 }
 
+// ── Optional: Kalorien ───────────────────────────────────────────────────────
+// Quellen: eigene Tabelle daily_kcal (manuell) und, falls vorhanden, log_entries aus dem Food Tracker
+// (gleiche Supabase-Datenbank). Manuelle Werte gehen vor. Nur aktiv, wenn im Menü eingeschaltet.
+const KC_SQL = `create table if not exists daily_kcal (
+  date date primary key,
+  kcal numeric not null,
+  created_at timestamptz default now()
+);
+alter table daily_kcal enable row level security;
+create policy "allow all" on daily_kcal
+  for all to anon using (true) with check (true);`;
+let kcEnabled = false, kcManual = {}, kcFood = {}, kcManualMissing = false, kcHasFood = false;
+
+function toggleKcalFeature(on) {
+  kcEnabled = !!on;
+  store('wt_kcal_on', on ? '1' : '0');
+  document.getElementById('tabBtnKcal').style.display = on ? '' : 'none';
+  if (on) loadKcal();
+  else if (activeTab === 'kcal') switchTab('weight', document.querySelector('.tab'));
+}
+function kcIsoDay(offset) { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().slice(0,10); }
+
+async function loadKcal() {
+  if (!sb || !kcEnabled) return;
+  const today = kcIsoDay(0);
+  const [m, f] = await Promise.all([
+    sb.from('daily_kcal').select('date,kcal'),
+    sb.from('log_entries').select('date,kcal').lt('date', today)
+  ]);
+  kcManualMissing = !!m.error;
+  kcManual = {};
+  (m.data || []).forEach(r => { kcManual[r.date] = parseFloat(r.kcal); });
+  kcFood = {};
+  kcHasFood = !f.error && (f.data || []).length > 0;
+  if (!f.error) (f.data || []).forEach(r => { kcFood[r.date] = (kcFood[r.date] || 0) + (parseFloat(r.kcal) || 0); });
+  updateKcal();
+}
+function kcAll() {
+  const out = Object.assign({}, kcFood, kcManual);
+  return Object.keys(out).sort().map(d => ({ date: d, kcal: Math.round(out[d]), manual: d in kcManual }));
+}
+
+async function addKcal() {
+  if (!sb) return;
+  const date = document.getElementById('kcDate').value;
+  const kcal = parseFloat(document.getElementById('kcValue').value);
+  if (!date || isNaN(kcal)) return;
+  const { error } = await sb.from('daily_kcal').upsert({ date, kcal }, { onConflict: 'date' });
+  if (error) { kcManualMissing = true; updateKcal(); document.getElementById('kcSetup').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+  document.getElementById('kcValue').value = '';
+  loadKcal();
+}
+async function removeKcal(date) {
+  if (!confirm('Eintrag vom ' + formatDate(date) + ' löschen?')) return;
+  await sb.from('daily_kcal').delete().eq('date', date);
+  loadKcal();
+}
+
+// Gewicht pro Tag, linear zwischen den Messungen interpoliert
+function kcDailyWeights() {
+  const s = sorted();
+  if (s.length < 2) return {};
+  const byDay = {}; const d0 = parseDate(s[0].date), d1 = parseDate(s[s.length-1].date);
+  let j = 0;
+  for (let d = new Date(d0); d <= d1; d.setDate(d.getDate() + 1)) {
+    const iso = d.toISOString().slice(0,10);
+    while (j < s.length - 2 && s[j+1].date <= iso) j++;
+    const a = s[j], b = s[j+1];
+    const t = Math.max(0, Math.min(1, (d - parseDate(a.date)) / Math.max(1, parseDate(b.date) - parseDate(a.date))));
+    byDay[iso] = a.kg + (b.kg - a.kg) * t;
+  }
+  return byDay;
+}
+// Auswertung über 7-Tage-Abschnitte: Ø kcal der Woche gegen die Gewichtsveränderung dieser Woche.
+// Tagesschwankungen (Wasser, Salz) mitteln sich so weitgehend raus.
+function kcAnalyse() {
+  const w = kcDailyWeights();
+  const kmap = {}; kcAll().forEach(e => { kmap[e.date] = e.kcal; });
+  const avgW = iso => {                    // 3-Tage-Mittel um einen Tag, glättet Ausreißer
+    const d = parseDate(iso), v = [];
+    for (let o = -1; o <= 1; o++) { const x = new Date(d); x.setDate(x.getDate() + o); const k = x.toISOString().slice(0,10); if (w[k] !== undefined) v.push(w[k]); }
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : undefined;
+  };
+  const days = Object.keys(kmap).sort();
+  const wins = [];
+  days.forEach(start => {
+    const ks = [], d = parseDate(start);
+    for (let o = 0; o < 7; o++) { const x = new Date(d); x.setDate(x.getDate() + o); const k = x.toISOString().slice(0,10); if (kmap[k] !== undefined) ks.push(kmap[k]); }
+    if (ks.length < 6) return;
+    const end = new Date(d); end.setDate(end.getDate() + 7);
+    const w0 = avgW(start), w1 = avgW(end.toISOString().slice(0,10));
+    if (w0 === undefined || w1 === undefined) return;
+    wins.push({ kcal: ks.reduce((a, b) => a + b, 0) / ks.length, wk: w1 - w0 });
+  });
+  if (wins.length < 3) return { wins, tdee: null };
+  // Verbrauch: Ø kcal + Ø Wochenverlust in kcal / 7
+  const aK = wins.reduce((a, x) => a + x.kcal, 0) / wins.length;
+  const aW = wins.reduce((a, x) => a + x.wk, 0) / wins.length;
+  return { wins, tdee: Math.round((aK - aW * 7700 / 7) / 10) * 10 };
+}
+function kcColor(k, tdee) { return k <= tdee - 250 ? '#5ab5a0' : k <= tdee ? '#f0c060' : '#e05a5a'; }
+const kcFmt = v => Math.round(v).toLocaleString('de-DE');
+
+function updateKcal() {
+  if (!kcEnabled) return;
+  const setup = document.getElementById('kcSetup');
+  if (kcManualMissing && !kcHasFood) {
+    setup.style.display = 'block';
+    setup.innerHTML = `<b>Einmalige Einrichtung:</b> In deiner Supabase-Datenbank fehlt noch die Tabelle für die Kalorien.
+      Im <b>SQL Editor</b> einfügen, <b>Run</b>, dann die Seite neu laden.<pre>${KC_SQL}</pre>
+      <button class="btn-sm" style="margin-top:0.5rem" onclick="navigator.clipboard.writeText(KC_SQL);this.textContent='Kopiert ✓'">SQL kopieren</button>`;
+  } else if (kcManualMissing) {
+    setup.style.display = 'block';
+    setup.innerHTML = `<details><summary style="cursor:pointer">Die Werte kommen aus deinem Food Tracker. Tage von Hand ergänzen?</summary>
+      <div style="margin-top:0.5rem">Dafür einmalig die Tabelle im Supabase <b>SQL Editor</b> anlegen:</div><pre>${KC_SQL}</pre>
+      <button class="btn-sm" style="margin-top:0.5rem" onclick="navigator.clipboard.writeText(KC_SQL);this.textContent='Kopiert ✓'">SQL kopieren</button></details>`;
+  } else setup.style.display = 'none';
+  document.getElementById('kcSource').textContent = kcHasFood ? 'inkl. Food Tracker' : '';
+  if (!document.getElementById('kcDate').value) document.getElementById('kcDate').value = kcIsoDay(-1);
+
+  const all = kcAll();
+  const { wins, tdee } = kcAnalyse();
+  const ref = tdee || (all.length ? all.reduce((a, e) => a + e.kcal, 0) / all.length : 2000);
+
+  // Auswertung: Wochen nach Ø kcal in Bereiche sortiert (Grenzen aus den eigenen Werten, auf 50 gerundet)
+  const ins = document.getElementById('kcInsight');
+  const kDays = all.length;
+  if (wins.length < 8) {
+    ins.innerHTML = `<div class="empty-state">Ab etwa 2 Wochen mit Kalorien und Gewicht gibt es hier eine Auswertung (bisher ${kDays} ${kDays === 1 ? 'Tag' : 'Tage'}).</div>`;
+  } else {
+    const ks = wins.map(p => p.kcal).sort((a, b) => a - b);
+    const q = f => Math.round(ks[Math.floor(f * (ks.length - 1))] / 50) * 50;
+    const edges = [...new Set([q(0.33), q(0.67)])];
+    const buckets = [];
+    for (let i = 0; i <= edges.length; i++) {
+      const lo = i ? edges[i-1] : -Infinity, hi = i < edges.length ? edges[i] : Infinity;
+      const b = wins.filter(p => p.kcal >= lo && p.kcal < hi);
+      if (b.length >= 2) buckets.push({ lo, hi, n: b.length, wk: b.reduce((a, p) => a + p.wk, 0) / b.length });
+    }
+    const maxAbs = Math.max(...buckets.map(b => Math.abs(b.wk)), 0.1);
+    ins.innerHTML = buckets.map(b => {
+      const label = b.lo === -Infinity ? 'Ø unter ' + kcFmt(b.hi) : b.hi === Infinity ? 'Ø über ' + kcFmt(b.lo) : 'Ø ' + kcFmt(b.lo) + '–' + kcFmt(b.hi);
+      const col = b.wk <= -0.3 ? '#5ab5a0' : b.wk <= -0.1 ? '#9ec27a' : b.wk < 0.1 ? '#f0c060' : '#e05a5a';
+      return `<div class="kc-bucket"><div class="bk">${label}<small>${b.n} ${b.n === 1 ? 'Zeitraum' : 'Zeiträume'}</small></div>
+        <div class="bar"><i style="width:${Math.max(4, Math.abs(b.wk) / maxAbs * 100).toFixed(0)}%;background:${col}"></i></div>
+        <div class="bv" style="color:${col}">${b.wk > 0.05 ? '+' : b.wk < -0.05 ? '−' : '±'}${deNum(Math.abs(b.wk))} kg</div></div>`;
+    }).join('') + `<div class="ms-edit-hint" style="text-align:left">Gewichtsveränderung pro Woche, je nachdem wie viel du im Schnitt gegessen hast. Gerechnet wird mit 7-Tage-Zeiträumen, die sich überschneiden.</div>`
+      + (tdee ? `<div class="kc-tip">Dein Verbrauch liegt grob bei <b>${kcFmt(tdee)} kcal</b> am Tag. Darunter nimmst du ab, darüber stagniert oder steigt dein Gewicht.</div>` : '');
+  }
+
+  // Liste der letzten Tage
+  const list = document.getElementById('kcList');
+  const recent = all.slice(-10).reverse();
+  list.innerHTML = recent.length ? recent.map(e => `<div class="ms-entry" style="align-items:center">
+      <div class="ms-entry-date">${formatDate(e.date)}</div>
+      <div class="ms-entry-vals"><span><b style="color:${kcColor(e.kcal, ref)}">${kcFmt(e.kcal)}</b> <span class="n">kcal</span></span>
+        <span class="n">${e.manual ? 'von Hand' : 'Food Tracker'}</span></div>
+      <div class="ms-entry-act">${e.manual ? `<button class="btn-sm" onclick="removeKcal('${e.date}')">✕</button>` : ''}</div></div>`).join('')
+    : '<div class="empty-state">Noch keine Kalorien eingetragen</div>';
+  drawKcalChart();
+}
+
+function drawKcalChart() {
+  const canvas = document.getElementById('kcChart');
+  if (!canvas || !kcEnabled || activeTab !== 'kcal') return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth - 40, H = 260;
+  canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
+  const days = []; for (let i = 41; i >= 0; i--) days.push(kcIsoDay(-i));
+  const ml = 36, mr = 8, mt = 10, wH = 130, gap = 26, bH = 70;
+  const cW = W - ml - mr, xOf = i => ml + (i + 0.5) * cW / days.length;
+  const kmap = {}; kcAll().forEach(e => { kmap[e.date] = e.kcal; });
+  const { tdee } = kcAnalyse();
+  const vals = Object.values(kmap);
+  const ref = tdee || (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 2000);
+  ctx.font = '9.5px DM Sans,sans-serif';
+  // Gewicht
+  const s = sorted().filter(e => e.date >= days[0]);
+  if (s.length) {
+    const ks = s.map(e => e.kg); let lo = Math.min(...ks) - 0.3, hi = Math.max(...ks) + 0.3;
+    const yOf = v => mt + (1 - (v - lo) / (hi - lo)) * wH;
+    ctx.textAlign = 'right';
+    for (let v = Math.ceil(lo); v <= hi; v++) {
+      ctx.strokeStyle = '#3a342c'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ml, yOf(v)); ctx.lineTo(ml + cW, yOf(v)); ctx.stroke();
+      ctx.fillStyle = '#8a7a6a'; ctx.fillText(v, ml - 5, yOf(v) + 3);
+    }
+    ctx.strokeStyle = '#e8835a'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.beginPath();
+    s.forEach((e, i) => { const x = xOf(days.indexOf(e.date)); i ? ctx.lineTo(x, yOf(e.kg)) : ctx.moveTo(x, yOf(e.kg)); });
+    ctx.stroke();
+    const l = s[s.length-1]; ctx.fillStyle = '#e8835a'; ctx.beginPath(); ctx.arc(xOf(days.indexOf(l.date)), yOf(l.kg), 3.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // Kalorien-Balken
+  const bTop = mt + wH + gap, kmax = Math.max(ref * 1.35, ...vals.filter((v, i) => true), 1);
+  ctx.textAlign = 'left'; ctx.fillStyle = '#8a7a6a'; ctx.fillText('kcal pro Tag', ml, bTop - 7);
+  const bw = Math.max(2, cW / days.length - 2);
+  days.forEach((d, i) => {
+    const k = kmap[d]; if (k === undefined) return;
+    const h = Math.min(k, kmax) / kmax * bH;
+    ctx.fillStyle = kcColor(k, ref); ctx.globalAlpha = 0.85;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(xOf(i) - bw/2, bTop + bH - h, bw, h, 2) : ctx.rect(xOf(i) - bw/2, bTop + bH - h, bw, h); ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+  const ty = bTop + bH - ref / kmax * bH;
+  ctx.save(); ctx.strokeStyle = 'rgba(240,234,216,0.5)'; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(ml, ty); ctx.lineTo(ml + cW, ty); ctx.stroke(); ctx.restore();
+  ctx.fillStyle = 'rgba(240,234,216,0.75)'; ctx.textAlign = 'right';
+  ctx.fillText((tdee ? 'Verbrauch ~' : 'Ø ') + kcFmt(ref), ml + cW, ty - 4);
+  ctx.fillStyle = '#8a7a6a'; ctx.textAlign = 'left'; ctx.fillText(formatDate(days[0]), ml, H - 4);
+  ctx.textAlign = 'right'; ctx.fillText('heute', ml + cW, H - 4);
+}
+
+function initKcalFeature() {
+  const on = retrieve('wt_kcal_on') === '1';
+  document.getElementById('optKcal').checked = on;
+  if (on) toggleKcalFeature(true);
+}
+
 function initMeasureFeature() {
   msBuildInputs();
   const on = retrieve('wt_measure_on') === '1';
@@ -1887,6 +2144,7 @@ function initMeasureFeature() {
   }
 
   initMeasureFeature();
+  initKcalFeature();
 })();
 </script>
 </div></div>
