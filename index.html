@@ -7,6 +7,13 @@
 <!-- Eigenes dunkles Design: verhindert, dass der automatische Dunkelmodus des Browsers Farben umrechnet -->
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#1a1612">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gewicht">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>Gewichts-Tracker</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -530,6 +537,8 @@
     background: color-mix(in srgb, var(--a-acc) 9%, transparent); border: 1px solid color-mix(in srgb, var(--a-acc) 25%, transparent); }
   .acct-prog { font-size: 0.8rem; color: var(--a-muted); min-height: 1.1em; margin: 0.3rem 0 0.6rem; }
   .acct-mail { font-size: 0.9rem; word-break: break-all; }
+  .acct-steps { margin: 0.4rem 0 0.2rem 1.1rem; padding: 0; font-size: 0.88rem; line-height: 1.55; }
+  .acct-steps li { margin-bottom: 0.45rem; }
 /* ACCOUNT-CSS:END */
 </style>
 </head>
@@ -762,6 +771,7 @@
     <button class="nav-item " onclick="showMenuPage('features')"><span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M12 3l2.3 5.4L20 9.3l-4.3 3.8 1.3 5.7L12 16l-5 2.8 1.3-5.7L4 9.3l5.7-.9z"/></svg></span><span class="nav-txt">Zusatzfunktionen<small>Körpermaße, Kalorien</small></span><span class="nav-chev">›</span></button>
     <button class="nav-item " onclick="showMenuPage('account')"><span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><span class="nav-txt">Konto<small>E-Mail, Passwort, alte Daten</small></span><span class="nav-chev">›</span></button>
     <div class="menu-section">Mehr</div>
+    <button class="nav-item" id="installItem" style="display:none" onclick="pwaInstall()"><span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M12 7v7M9 11l3 3 3-3M10.5 18.5h3"/></svg></span><span class="nav-txt">Als App installieren<small>Mit eigenem Symbol auf dem Startbildschirm</small></span><span class="nav-chev">›</span></button>
     <a class="nav-item" href="../food-tracker/"><span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M7 4v14M3 14l4 4 4-4M17 20V6M13 10l4-4 4 4"/></svg></span><span class="nav-txt">Food Tracker öffnen<small>Kalorien und Essen</small></span><span class="nav-chev">↗</span></a>
     <button class="nav-item danger" onclick="acctLogout()"><span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg></span><span class="nav-txt">Ausloggen<small>Auf diesem Gerät abmelden</small></span><span class="nav-chev">›</span></button>
   </div>
@@ -1119,6 +1129,35 @@ async function acctImport() {
     acctSay('Das hat nicht ganz geklappt (' + e.message + '). Was schon übernommen ist, bleibt. Du kannst es einfach nochmal versuchen.');
     btn.disabled = false; btn.textContent = 'Nochmal versuchen'; later.style.display = '';
   }
+}
+
+// ── Als App installieren (PWA) ───────────────────────────────────────────────
+let pwaPrompt = null;
+const pwaStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const pwaIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function pwaUpdate() {
+  const el = document.getElementById('installItem');
+  if (el) el.style.display = !pwaStandalone() && (pwaPrompt || pwaIOS()) ? '' : 'none';
+}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwaPrompt = e; pwaUpdate(); });
+window.addEventListener('appinstalled', () => { pwaPrompt = null; pwaUpdate(); });
+window.addEventListener('load', () => {
+  pwaUpdate();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+});
+async function pwaInstall() {
+  if (typeof closeMenu === 'function') closeMenu();
+  if (pwaPrompt) { pwaPrompt.prompt(); try { await pwaPrompt.userChoice; } catch (e) {} pwaPrompt = null; pwaUpdate(); return; }
+  const el = acctEl(); el.style.display = 'flex'; document.body.classList.add('acct-open'); el.dataset.view = 'install';
+  const oldTodo = acctOldSources().length && acctLs('import_done') !== '1';
+  el.innerHTML = `<div class="acct-box"><h1>Auf den Home-Bildschirm</h1>
+    <ol class="acct-steps">
+      <li>Unten in Safari auf <b>Teilen</b> tippen (das Quadrat mit dem Pfeil nach oben).</li>
+      <li>Nach unten scrollen und <b>Zum Home-Bildschirm</b> wählen.</li>
+      <li>Oben rechts auf <b>Hinzufügen</b> tippen.</li>
+    </ol>
+    <div class="acct-note">In der App musst du dich einmal neu einloggen, das iPhone trennt sie von Safari.${oldTodo ? ' Übernimm deine alten Daten vorher noch hier in Safari (Menü → Konto), nur hier findet die App sie.' : ''}</div>
+    <button class="acct-btn" style="margin-top:1rem" onclick="acctHide()">Alles klar</button></div>`;
 }
 /* ACCOUNT-JS:END */
 let sb = null;
