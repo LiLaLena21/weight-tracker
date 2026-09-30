@@ -287,6 +287,80 @@
     .ms-img-wrap { flex: none; max-width: 220px; align-self: center; width: 70%; }
     .ms-values { width: 100%; }
   }
+
+  /* ═══ Design: einheitlicher Look passend zur Übersichtskarte ═══ */
+  :root { --glass: rgba(20,17,13,0.55); --radius: 20px; --shadow: 0 12px 32px rgba(0,0,0,0.28); }
+  body {
+    background:
+      radial-gradient(900px 520px at 110% -10%, rgba(232,131,90,0.10), transparent 60%),
+      radial-gradient(700px 520px at -20% 105%, rgba(90,181,160,0.07), transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+  h1 { font-size: 2rem; letter-spacing: -0.01em; }
+  header { margin-bottom: 1.25rem; }
+  .menu-btn { border-radius: 14px; background: var(--glass); }
+  .hero, .chart-card, .input-card, .goals-card { border-radius: var(--radius); box-shadow: var(--shadow); }
+  .chart-card, .input-card, .goals-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0) 40%), var(--card);
+  }
+  .chart-card { padding: 1.2rem 1rem 0.9rem; }
+  .card-title, .input-card h2, .goals-card h2 {
+    font-family: 'Lora', serif; font-size: 1.1rem; font-weight: 600; color: var(--text);
+  }
+  .chart-card .card-title { padding: 0 0.25rem; margin-bottom: 0.7rem; }
+  .legend { gap: 0.4rem; margin-bottom: 0.9rem; }
+  .legend-item { background: var(--glass); border: 1px solid var(--border); border-radius: 999px; padding: 0.22rem 0.6rem; font-size: 0.7rem; }
+  .leg-line { width: 14px; }
+  .legend-item svg { width: 14px; }
+
+  /* Tabs als Pill-Umschalter */
+  .tabs {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px;
+    margin: 1rem 1rem 0; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--glass);
+  }
+  .tab {
+    border: none !important; border-radius: 999px; margin: 0; padding: 0.5rem 0.3rem; font-size: 0.76rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
+  }
+  .tab.active { background: linear-gradient(135deg, #ee9a6c, #e07448); color: #1a1612; font-weight: 600; box-shadow: 0 4px 12px rgba(232,131,90,0.3); }
+  .tab-content { padding: 1.2rem 1.1rem 1.1rem; }
+
+  /* Eingaben & Buttons */
+  input[type="date"], input[type="number"], input[type="text"], select {
+    border-radius: 12px; padding: 0.62rem 0.8rem; background: var(--glass);
+  }
+  .input-group label, .menu-goals label { font-size: 0.72rem; letter-spacing: 0.02em; }
+  .btn {
+    border-radius: 12px; padding: 0.64rem 1.15rem;
+    background: linear-gradient(135deg, #ee9a6c, #e07448); color: #1a1612; font-weight: 600;
+    box-shadow: 0 6px 16px rgba(232,131,90,0.28);
+  }
+  .btn-event { background: linear-gradient(135deg, #f5cf7a, #e6b24a); box-shadow: 0 6px 16px rgba(240,192,96,0.22); }
+  .btn-sm { border-radius: 999px; padding: 0.28rem 0.7rem; background: var(--glass); }
+
+  /* Tabellen */
+  .data-table th { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .data-table td { border-bottom-color: rgba(58,52,44,0.45); }
+  .month-row td { background: var(--glass); border-bottom: 1px solid var(--border); }
+  .month-row:hover td { background: rgba(232,131,90,0.07); }
+  .month-row.open td { color: var(--text); }
+  .month-row.open .m-arrow { color: var(--actual); }
+  .events-section-title { font-size: 0.68rem; letter-spacing: 0.08em; }
+  .event-badge, .goal-badge, .ms-pill { border-radius: 12px; }
+  .ms-img-wrap img { border-radius: 16px; }
+  .menu-panel { background: linear-gradient(180deg, rgba(232,131,90,0.08), rgba(232,131,90,0) 30%), var(--card); }
+  .menu-item { background: var(--glass); border-radius: 14px; }
+  .empty-state { font-style: normal; }
+  @media (max-width: 560px) {
+    .input-row { flex-wrap: wrap; }
+    .input-row > .btn { flex: 1 1 100%; }
+    .input-row > .input-group { min-width: 0; flex: 1 1 40%; max-width: none !important; }
+  }
+  @media (max-width: 420px) {
+    .tab { font-size: 0.72rem; }
+    .hero-kg { font-size: 2.6rem; }
+  }
 </style>
 </head>
 <body>
@@ -380,9 +454,9 @@
     </div>
     <div id="goalBadges"></div>
   </div>
-  </div>
 
   <div class="chart-card">
+    <div class="card-title">Verlauf</div>
     <div class="legend">
       <div class="legend-item"><div class="leg-line" style="background:var(--actual)"></div>Tatsächlich</div>
       <div class="legend-item">
@@ -438,7 +512,7 @@
       <div class="input-row" style="margin-bottom:1rem;flex-wrap:wrap">
         <div class="input-group" style="flex:1 1 100%"><label>Zyklusstart (Tag 1 der Periode)</label><input type="date" id="cycleStartDate"></div>
         <div class="input-group" style="flex:1 1 140px"><label>Bezeichnung (optional)</label><input type="text" id="cycleName" placeholder="z.B. Jun '26"></div>
-        <button class="btn" style="background:var(--prognose);color:#1a1612" onclick="addCycle()">Hinzufügen</button>
+        <button class="btn" style="background:linear-gradient(135deg,#6cc7b2,#4aa591);color:#1a1612;box-shadow:0 6px 16px rgba(90,181,160,0.25)" onclick="addCycle()">Hinzufügen</button>
       </div>
       <div id="cycleTable"></div>
     </div>
@@ -798,12 +872,12 @@ function updateTableGrouped(s) {
     let diffHtml = '';
     if (diff !== null) {
       const cls = diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : '';
-      diffHtml = `<span class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(2)}</span>`;
+      diffHtml = `<span class="${cls}">${diff > 0 ? '+' : '−'}${deNum(Math.abs(diff), 2)}</span>`;
     }
     const isFirst = e.date === s[0].date;
     return `<tr>
       <td>${formatDate(e.date)}</td>
-      <td class="kg">${e.kg.toFixed(2)} kg</td>
+      <td class="kg">${deNum(e.kg, 2)} kg</td>
       <td>${diffHtml}</td>
       <td>${isFirst ? '' : `<button class="btn-sm" onclick="removeEntry('${e.date}')">✕</button>`}</td>
     </tr>`;
@@ -821,7 +895,7 @@ function updateTableGrouped(s) {
     const name = new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
     const head = `<tr class="month-row${open ? ' open' : ''}" onclick="toggleMonth('${k}')"><td colspan="4">
       <span class="m-arrow">▸</span><span class="m-name">${name}</span>
-      <span class="m-meta"> · ${list.length} ${list.length === 1 ? 'Messung' : 'Messungen'} · Ø ${avg.toFixed(2)} kg · </span><span class="${cls}">${change > 0 ? '+' : ''}${change.toFixed(2)}</span>
+      <span class="m-meta"> · ${list.length} ${list.length === 1 ? 'Messung' : 'Messungen'} · Ø ${deNum(avg, 2)} kg · </span><span class="${cls}">${change > 0 ? '+' : '−'}${deNum(Math.abs(change), 2)}</span>
     </td></tr>`;
     return head + (open ? list.map(rowHtml).join('') : '');
   }).join('');
@@ -841,12 +915,12 @@ function updateTable() {
     if (diff !== null) {
       const cls = diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : '';
       const sign = diff > 0 ? '+' : '';
-      diffHtml = `<span class="${cls}">${sign}${diff.toFixed(2)}</span>`;
+      diffHtml = `<span class="${cls}">${diff > 0 ? '+' : '−'}${deNum(Math.abs(diff), 2)}</span>`;
     }
     const isFirst = e.date === s[0].date;
     return `<tr>
       <td>${formatDate(e.date)}</td>
-      <td class="kg">${e.kg.toFixed(2)} kg</td>
+      <td class="kg">${deNum(e.kg, 2)} kg</td>
       <td>${diffHtml}</td>
       <td>${isFirst ? '' : `<button class="btn-sm" onclick="removeEntry('${e.date}')">✕</button>`}</td>
     </tr>`;
@@ -982,7 +1056,7 @@ function drawChart() {
   function xOfStr(str) { return xOf(parseDate(str)); }
   function yOf(kg) { return mt + (1 - (kg - minKg) / kgRange) * cH; }
 
-  ctx.fillStyle = '#242018'; ctx.fillRect(0, 0, W, H);
+  ctx.clearRect(0, 0, W, H);
 
   for (let k = Math.ceil(minKg); k <= Math.floor(maxKg); k++) {
     if (k % 2 !== 0 && kgRange > 10) continue;
@@ -1066,22 +1140,34 @@ function drawChart() {
     ctx.stroke(); ctx.restore();
   }
 
+  // Punkte nur bei wenigen Messungen; sonst reicht die Linie. Letzter Wert hervorgehoben.
+  const dense = s.length > 40;
   s.forEach((e,i) => {
     const [x,y] = actualPts[i];
-    ctx.save();
-    ctx.fillStyle = i===s.length-1 ? '#e8835a' : '#242018';
-    ctx.strokeStyle = '#e8835a'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
-    if (i===0 || i===s.length-1) {
-      ctx.fillStyle = '#e8835a'; ctx.font = 'bold 10px DM Sans,sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(e.kg.toFixed(2)+' kg', x, y-9);
+    const isLast = i === s.length-1;
+    if (!dense || isLast) {
+      ctx.save();
+      if (isLast) { ctx.fillStyle = 'rgba(232,131,90,0.25)'; ctx.beginPath(); ctx.arc(x,y,9,0,Math.PI*2); ctx.fill(); }
+      ctx.fillStyle = isLast ? '#e8835a' : '#1f1b16';
+      ctx.strokeStyle = '#e8835a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x,y,isLast ? 4.5 : 3,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
+    }
+    if (i===0 || isLast) {
+      const txt = e.kg.toFixed(1).replace('.', ',')+' kg';
+      ctx.save(); ctx.font = '600 10.5px DM Sans,sans-serif';
+      const tw = ctx.measureText(txt).width + 12;
+      const lx = Math.min(Math.max(x, ml + tw/2), ml + cW - tw/2), ly = y - 18;
+      ctx.fillStyle = 'rgba(26,22,18,0.85)'; ctx.strokeStyle = 'rgba(232,131,90,0.6)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(lx - tw/2, ly - 9, tw, 18, 9) : ctx.rect(lx - tw/2, ly - 9, tw, 18); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#f0ead8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(txt, lx, ly + 0.5); ctx.restore();
     }
   });
 
   function endDot(pts, color, label) {
     if (pts.length < 2) return;
     const [x,y] = pts[pts.length-1];
-    ctx.save(); ctx.fillStyle='#242018'; ctx.strokeStyle=color; ctx.lineWidth=2.5;
+    ctx.save(); ctx.fillStyle='#1f1b16'; ctx.strokeStyle=color; ctx.lineWidth=2.5;
     ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
     ctx.fillStyle=color; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='center';
     ctx.fillText(label, x, y-9); ctx.restore();
@@ -1154,14 +1240,14 @@ function updateCycleTable() {
     let diff = '';
     if (prevAvg !== null && prevAvg !== undefined) {
       const d = avg - prevAvg;
-      diff = `<div class="${d < 0 ? 'diff-neg' : 'diff-pos'}" style="font-family:'DM Sans',sans-serif">${d > 0 ? '+' : ''}${d.toFixed(2)}</div>`;
+      diff = `<div class="${d < 0 ? 'diff-neg' : 'diff-pos'}" style="font-family:'DM Sans',sans-serif">${d > 0 ? '+' : '−'}${deNum(Math.abs(d), 2)}</div>`;
     }
-    return `<td class="kg"${italic ? ' style="font-style:italic"' : ''}>${avg.toFixed(2)}${diff}</td>`;
+    return `<td class="kg"${italic ? ' style="font-style:italic"' : ''}>${deNum(avg, 2)}${diff}</td>`;
   };
   let html = '<table class="data-table" style="font-size:0.8rem;table-layout:fixed"><thead><tr>';
   html += '<th style="width:28%">Woche</th>';
   displayCycles.forEach(c => {
-    html += `<th style="color:var(--actual);vertical-align:bottom"><div style="overflow-wrap:anywhere">${c.name}</div>
+    html += `<th style="color:var(--actual);vertical-align:bottom;text-transform:none;letter-spacing:0;font-size:0.78rem"><div style="overflow-wrap:anywhere">${c.name}</div>
       <button class="btn-sm" style="padding:0.05rem 0.4rem;margin-top:0.25rem;font-size:0.68rem" onclick="removeCycle(${c.id})">✕</button></th>`;
   });
   html += '</tr></thead><tbody>';
@@ -1440,7 +1526,7 @@ function drawMeasureChart() {
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  ctx.fillStyle = '#242018'; ctx.fillRect(0, 0, W, H);
+  ctx.clearRect(0, 0, W, H);
 
   const key = document.getElementById('msChartField').value;
   const s = msSeries(key);
