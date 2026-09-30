@@ -339,6 +339,7 @@
   .greet-ico svg { width: 1.7rem; height: 1.7rem; overflow: visible; }
   .greet-ico.noon .rays { transform-origin: 16px 16px; animation: greetSpin 24s linear infinite; }
   .greet-ico.morning .rays, .greet-ico.evening .rays { animation: greetPulse 3.5s ease-in-out infinite; }
+  .greet-ico.birthday .flames { animation: greetTwinkle 1.4s ease-in-out infinite; }
   .greet-ico.night .stars { animation: greetTwinkle 2.8s ease-in-out infinite; }
   @keyframes greetSpin { to { transform: rotate(360deg); } }
   @keyframes greetPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
@@ -394,6 +395,7 @@
   .profile-card b { font-family: 'Lora', serif; font-size: 1.05rem; font-weight: 600; }
   .avatar { width: 2.8rem; height: 2.8rem; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-family: 'Lora', serif; font-size: 1.2rem; font-weight: 600;
     background: linear-gradient(135deg, var(--accent-hi), var(--accent-lo)); color: var(--on-accent); }
+  .pf-grid input[type=date] { min-width: 0; }
   .pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
   .menu-form { display: flex; flex-direction: column; gap: 0.8rem; }
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--glass); }
@@ -521,8 +523,8 @@
       </div>
       <div style="display:flex;gap:0.6rem">
         <div style="flex:1">
-          <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:0.3rem">Alter</label>
-          <input id="onboardAge" type="number" placeholder="Dein Alter" min="10" max="120" style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.6rem 0.8rem;font-size:0.88rem;width:100%;font-family:inherit;outline:none">
+          <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:0.3rem">Geburtstag</label>
+          <input id="onboardAge" type="date" style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.6rem 0.8rem;font-size:0.88rem;width:100%;font-family:inherit;outline:none">
         </div>
         <div style="flex:1">
           <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:0.3rem">Größe (cm)</label>
@@ -753,7 +755,7 @@
       <div class="input-group"><label>Geschlecht</label>
         <div class="seg"><button id="pfW" onclick="pfSetGender('w')">Weiblich</button><button id="pfM" onclick="pfSetGender('m')">Männlich</button></div></div>
       <div class="pf-grid">
-        <div class="input-group"><label>Alter</label><input type="number" id="pfAge" min="10" max="120"></div>
+        <div class="input-group"><label>Geburtstag <span id="pfAgeHint" style="opacity:.7"></span></label><input type="date" id="pfBirthday" oninput="pfAgeUpdate()"></div>
         <div class="input-group"><label>Größe (cm)</label><input type="number" id="pfHeight" min="100" max="250"></div>
       </div>
       <button class="btn" style="width:100%" onclick="saveProfileMenu()">Speichern</button>
@@ -933,7 +935,8 @@ function saveOnboarding() {
   if (!name || !selectedGender) { alert('Bitte Name und Geschlecht eingeben!'); return; }
   userProfile = {
     name, gender: selectedGender,
-    age: document.getElementById('onboardAge').value,
+    birthday: document.getElementById('onboardAge').value || '',
+    age: calcAge(document.getElementById('onboardAge').value) || '',
     height: document.getElementById('onboardHeight').value,
     startKg: document.getElementById('onboardStart').value,
     goalKg: document.getElementById('onboardGoal').value,
@@ -963,9 +966,17 @@ const GREET_ICONS = {
   noon:    `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="16" cy="16" r="5.5"/><g class="rays"><path d="M16 4v3M16 25v3M4 16h3M25 16h3M7.5 7.5l2.1 2.1M22.4 22.4l2.1 2.1M7.5 24.5l2.1-2.1M22.4 9.6l2.1-2.1"/></g></svg>`,
   afternoon: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="13" cy="13" r="4.5"/><path d="M13 4v2M4 13h2M6.6 6.6l1.4 1.4M19.4 6.6 18 8" class="rays"/><path d="M11 25h12a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.3 1.8A3.6 3.6 0 0 0 11 25z" fill="var(--card)"/></svg>`,
   evening: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 21h22"/><path d="M10 21a6 6 0 0 1 12 0"/><path d="M8 25h16M11 28.5h10" opacity=".55"/><path d="M16 4v8M13 9l3 3 3-3"/><path d="M9.5 13.5l1.4 1.4M22.5 13.5l-1.4 1.4" class="rays" opacity=".7"/></svg>`,
+  birthday: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 27h20M8 27V17h16v10"/><path d="M8 21c2 1.6 4 1.6 5.3 0 1.4 1.6 4 1.6 5.4 0 1.3 1.6 3.3 1.6 5.3 0"/><path d="M12 17v-4M16 17v-4M20 17v-4"/><path d="M12 10.5c-.9-.8-.9-1.8 0-3 .9 1.2.9 2.2 0 3zM16 10.5c-.9-.8-.9-1.8 0-3 .9 1.2.9 2.2 0 3zM20 10.5c-.9-.8-.9-1.8 0-3 .9 1.2.9 2.2 0 3z" class="flames"/></svg>`,
   night:   `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21.5A9 9 0 0 1 12.5 7a9 9 0 1 0 12.3 12.3 8.9 8.9 0 0 1-3.8 2.2z"/><path d="M23 6.5v3M21.5 8h3M26.5 13v2M25.5 14h2" class="stars"/></svg>`,
 };
+function isBirthday(d = new Date()) {
+  const b = userProfile && userProfile.birthday;
+  if (!b) return false;
+  const [, m, day] = b.split('-').map(Number);
+  return d.getMonth() + 1 === m && d.getDate() === day;
+}
 function greetingNow(d = new Date()) {
+  if (isBirthday(d)) return { text: 'Alles Gute zum Geburtstag', icon: 'birthday' };
   const h = d.getHours();
   if (h >= 5 && h < 11) return { text: 'Guten Morgen', icon: 'morning' };
   if (h >= 11 && h < 14) return { text: 'Guten Mittag', icon: 'noon' };
@@ -979,7 +990,31 @@ function updateGreeting() {
   const g = greetingNow();
   headerEl.innerHTML = `<span class="greet-ico ${g.icon}">${GREET_ICONS[g.icon]}</span><span>${g.text},<br class="greet-br"> ${userProfile.name}</span>`;
   const sub = document.querySelector('header .subtitle');
-  if (sub) sub.textContent = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+  const age = isBirthday() ? calcAge(userProfile.birthday) : null;
+  if (sub) sub.textContent = age !== null ? `Heute wirst du ${age}! Lass dich feiern.` : new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+  if (isBirthday()) birthdayConfetti('wt');
+}
+// Konfetti einmal pro Geburtstag und App
+function birthdayConfetti(app) {
+  const key = `bday_confetti_${app}_${new Date().getFullYear()}`;
+  try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch(e) { return; }
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = document.createElement('canvas');
+  c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9998';
+  document.body.appendChild(c);
+  const dpr = window.devicePixelRatio || 1, W = innerWidth, H = innerHeight;
+  c.width = W * dpr; c.height = H * dpr; const ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
+  const cols = [getComputedStyle(document.documentElement).getPropertyValue('--actual').trim() || '#e8835a', '#f0c060', '#5ab5a0', '#e05a8a', '#a78bfa', '#4fb3d9'];
+  const ps = Array.from({ length: 140 }, () => ({ x: Math.random() * W, y: -20 - Math.random() * H * 0.6, vx: (Math.random() - 0.5) * 2.2, vy: 2 + Math.random() * 3.2,
+    r: 4 + Math.random() * 5, a: Math.random() * 6.28, va: (Math.random() - 0.5) * 0.25, col: cols[Math.floor(Math.random() * cols.length)] }));
+  const t0 = performance.now();
+  (function frame(t) {
+    const el = t - t0; ctx.clearRect(0, 0, W, H);
+    ps.forEach(p => { p.x += p.vx; p.y += p.vy; p.a += p.va; p.vy += 0.02;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.globalAlpha = Math.max(0, 1 - Math.max(0, el - 3000) / 1200);
+      ctx.fillStyle = p.col; ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); ctx.restore(); });
+    if (el < 4300) requestAnimationFrame(frame); else c.remove();
+  })(t0);
 }
 setInterval(updateGreeting, 60000);
 
@@ -1172,10 +1207,19 @@ function renderMenuProfile() {
   document.getElementById('menuAvatar').textContent = n ? n.trim()[0].toUpperCase() : '?';
 }
 let pfGender = 'w';
+function calcAge(bday, today = new Date()) {
+  if (!bday) return null;
+  const [y, m, d] = bday.split('-').map(Number);
+  let a = today.getFullYear() - y;
+  if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) a--;
+  return a >= 0 && a < 130 ? a : null;
+}
+function pfAgeUpdate() { const a = calcAge(document.getElementById('pfBirthday').value); document.getElementById('pfAgeHint').textContent = a !== null ? `· ${a} Jahre` : ''; }
 function pfSetGender(g) { pfGender = g; document.getElementById('pfW').classList.toggle('on', g === 'w'); document.getElementById('pfM').classList.toggle('on', g === 'm'); }
 function pfFill() {
   document.getElementById('pfName').value = userProfile.name || '';
-  document.getElementById('pfAge').value = userProfile.age || '';
+  document.getElementById('pfBirthday').value = userProfile.birthday || '';
+  pfAgeUpdate();
   document.getElementById('pfHeight').value = userProfile.height || '';
   pfSetGender(userProfile.gender === 'm' ? 'm' : 'w');
 }
@@ -1183,7 +1227,8 @@ function saveProfileMenu() {
   const name = document.getElementById('pfName').value.trim();
   if (!name) { document.getElementById('pfName').focus(); return; }
   const genderChanged = userProfile.gender !== pfGender;
-  Object.assign(userProfile, { name, gender: pfGender, age: document.getElementById('pfAge').value, height: document.getElementById('pfHeight').value });
+  const birthday = document.getElementById('pfBirthday').value || '';
+  Object.assign(userProfile, { name, gender: pfGender, birthday, age: calcAge(birthday) || userProfile.age || '', height: document.getElementById('pfHeight').value });
   store('wt_profile', JSON.stringify(userProfile));
   applyProfile(); renderMenuProfile();
   if (genderChanged && msEnabled) { msBuildInputs(); loadMeasureImage(); updateMeasure(); }
