@@ -620,7 +620,7 @@
       </div>
       <div class="ms-edit-hint" style="text-align:left;margin:0 0 0.9rem">Was du an einem Tag gegessen hast. Die App vergleicht das mit deinem Gewichtsverlauf.</div>
       <div id="kcSetup" class="ms-setup" style="display:none"></div>
-      <div class="input-row">
+      <div class="input-row" id="kcInputRow">
         <div class="input-group"><label>Tag</label><input type="date" id="kcDate"></div>
         <div class="input-group"><label>kcal</label><input type="number" id="kcValue" step="10" min="0" max="10000" placeholder="z.B. 1450"></div>
         <button class="btn" onclick="addKcal()">Eintragen</button>
@@ -2022,13 +2022,10 @@ function updateKcal() {
     setup.innerHTML = `<b>Einmalige Einrichtung:</b> In deiner Supabase-Datenbank fehlt noch die Tabelle für die Kalorien.
       Im <b>SQL Editor</b> einfügen, <b>Run</b>, dann die Seite neu laden.<pre>${KC_SQL}</pre>
       <button class="btn-sm" style="margin-top:0.5rem" onclick="navigator.clipboard.writeText(KC_SQL);this.textContent='Kopiert ✓'">SQL kopieren</button>`;
-  } else if (kcManualMissing) {
-    setup.style.display = 'block';
-    setup.innerHTML = `<details><summary style="cursor:pointer">Die Werte kommen aus deinem Food Tracker. Tage von Hand ergänzen?</summary>
-      <div style="margin-top:0.5rem">Dafür einmalig die Tabelle im Supabase <b>SQL Editor</b> anlegen:</div><pre>${KC_SQL}</pre>
-      <button class="btn-sm" style="margin-top:0.5rem" onclick="navigator.clipboard.writeText(KC_SQL);this.textContent='Kopiert ✓'">SQL kopieren</button></details>`;
   } else setup.style.display = 'none';
-  document.getElementById('kcSource').textContent = kcHasFood ? 'inkl. Food Tracker' : '';
+  // Mit Food Tracker und ohne eigene Tabelle: Eingabe hier ausblenden, eingetragen wird im Food Tracker
+  document.getElementById('kcInputRow').style.display = (kcHasFood && kcManualMissing) ? 'none' : '';
+  document.getElementById('kcSource').textContent = kcHasFood ? (kcManualMissing ? 'aus dem Food Tracker' : 'inkl. Food Tracker') : '';
   if (!document.getElementById('kcDate').value) document.getElementById('kcDate').value = kcIsoDay(-1);
 
   const all = kcAll(), used = kcRecent();
