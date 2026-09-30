@@ -13,6 +13,9 @@
     --actual: #e8835a; --trend: #e05a8a; --prognose: #5ab5a0;
     --goal1: #5ab5a0; --goal2: #4a8fa0; --event: #f0c060;
     --text: #f0ead8; --muted: #8a7a6a; --input-bg: #1a1612; --danger: #e05a5a;
+    --on-accent: #1a1612;
+    --accent-hi: color-mix(in srgb, var(--actual) 80%, white);
+    --accent-lo: color-mix(in srgb, var(--actual) 88%, black);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -90,7 +93,7 @@
     cursor: pointer; font-weight: 500; transition: opacity 0.2s; white-space: nowrap;
   }
   .btn:hover { opacity: 0.85; }
-  .btn-event { background: var(--event); color: #1a1612; }
+  .btn-event { background: var(--event); color: var(--on-accent); }
 
   .btn-sm {
     background: transparent; border: 1px solid var(--border); color: var(--muted);
@@ -106,7 +109,7 @@
   }
   .data-table td {
     font-size: 0.82rem; padding: 0.45rem 0.5rem;
-    border-bottom: 1px solid rgba(58,52,44,0.5); color: var(--text);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); color: var(--text);
   }
   .data-table tr:last-child td { border-bottom: none; }
   .data-table .kg { font-family: 'Lora', serif; }
@@ -179,15 +182,15 @@
   .ms-stage { position: relative; }
   .ms-ov { position: absolute; inset: 0; pointer-events: none; }
   .ms-mark { position: absolute; left: 0; right: 0; height: 0; }
-  .ms-mark .ms-line { position: absolute; top: -1.5px; height: 3px; border-radius: 2px; background: #e8835a; }
+  .ms-mark .ms-line { position: absolute; top: -1.5px; height: 3px; border-radius: 2px; background: var(--actual); }
   .ms-mark .ms-line::before, .ms-mark .ms-line::after {
-    content: ''; position: absolute; top: -2.5px; width: 8px; height: 8px; border-radius: 50%; background: #e8835a;
+    content: ''; position: absolute; top: -2.5px; width: 8px; height: 8px; border-radius: 50%; background: var(--actual);
   }
   .ms-mark .ms-line::before { left: -4px; } .ms-mark .ms-line::after { right: -4px; }
-  .ms-mark .ms-lead { position: absolute; top: 0; border-top: 1.5px dashed rgba(138,122,106,0.8); }
+  .ms-mark .ms-lead { position: absolute; top: 0; border-top: 1.5px dashed color-mix(in srgb, var(--muted) 80%, transparent); }
   .ms-mark .ms-tag {
     position: absolute; right: 2%; top: 0; transform: translateY(-50%); white-space: nowrap;
-    background: rgba(26,22,18,0.88); color: var(--text); border-radius: 999px;
+    background: color-mix(in srgb, var(--bg) 88%, transparent); color: var(--text); border-radius: 999px;
     padding: 0.18rem 0.55rem; font-size: 0.7rem; line-height: 1.25;
   }
   .ms-mark .ms-tag b { font-family: 'Lora', serif; font-weight: 600; }
@@ -195,7 +198,7 @@
   .ms-stage.editing .ms-ov { pointer-events: auto; }
   .ms-stage.editing .ms-mark { cursor: ns-resize; touch-action: none; }
   .ms-stage.editing .ms-mark::before { content: ''; position: absolute; left: 0; right: 0; top: -14px; height: 28px; }
-  .ms-stage.editing .ms-tag { outline: 1.5px solid #e8835a; }
+  .ms-stage.editing .ms-tag { outline: 1.5px solid var(--actual); }
   .ms-edit-hint { font-size: 0.72rem; color: var(--muted); margin-top: 0.4rem; text-align: center; }
   .ms-pick { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
   .ms-chip {
@@ -204,7 +207,7 @@
     font-size: 0.78rem; color: var(--muted); background: var(--card2);
   }
   .ms-chip input { display: none; }
-  .ms-chip.on { border-color: var(--actual); color: var(--text); background: rgba(232,131,90,0.12); }
+  .ms-chip.on { border-color: var(--actual); color: var(--text); background: color-mix(in srgb, var(--actual) 12%, transparent); }
   .menu-btn {
     position: absolute; top: 0.1rem; right: 0; width: 2.4rem; height: 2.4rem; border-radius: 10px;
     background: var(--card); border: 1px solid var(--border); color: var(--text); font-size: 1.15rem; cursor: pointer;
@@ -240,7 +243,7 @@
     position: relative; overflow: hidden; border-radius: 20px; padding: 1.3rem 1.2rem 1.1rem; margin-bottom: 1.25rem;
     border: 1px solid var(--border);
     background:
-      radial-gradient(120% 90% at 100% 0%, rgba(232,131,90,0.22) 0%, rgba(232,131,90,0) 55%),
+      radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--actual) 22%, transparent) 0%, color-mix(in srgb, var(--actual) 0%, transparent) 55%),
       radial-gradient(90% 80% at 0% 100%, rgba(90,181,160,0.14) 0%, rgba(90,181,160,0) 60%),
       var(--card);
   }
@@ -255,12 +258,12 @@
   .hero-ring .ring-pct { font-family: 'Lora', serif; font-size: 1.35rem; font-weight: 600; line-height: 1; }
   .hero-ring .ring-sub { font-size: 0.62rem; color: var(--muted); margin-top: 0.25rem; line-height: 1.2; }
   .hero-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 1.1rem 0 1rem; }
-  .chip { background: rgba(26,22,18,0.55); border: 1px solid var(--border); border-radius: 12px; padding: 0.55rem 0.6rem; text-align: center; }
+  .chip { background: color-mix(in srgb, var(--bg) 55%, transparent); border: 1px solid var(--border); border-radius: 12px; padding: 0.55rem 0.6rem; text-align: center; }
   .chip-val { font-family: 'Lora', serif; font-size: 1.05rem; }
   .chip-lbl { font-size: 0.66rem; color: var(--muted); margin-top: 0.1rem; }
   .hero-goals-head { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
   .hero-goals-head .btn-sm { text-transform: none; letter-spacing: 0; }
-  .hero .goal-item { background: rgba(26,22,18,0.55); padding: 0.7rem 0.85rem; margin-bottom: 0.5rem; }
+  .hero .goal-item { background: color-mix(in srgb, var(--bg) 55%, transparent); padding: 0.7rem 0.85rem; margin-bottom: 0.5rem; }
   .hero .goal-top { margin-bottom: 0.4rem; }
   .hero .goal-name b { font-size: 1rem; }
   .hero .goal-dates { margin-top: 0.45rem; display: flex; gap: 1rem; font-size: 0.78rem; }
@@ -269,7 +272,7 @@
   .ms-img-actions { justify-content: center; }
   .ms-add-toggle {
     width: 100%; padding: 0.7rem; border-radius: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif;
-    border: 1px dashed rgba(232,131,90,0.55); background: rgba(232,131,90,0.06); color: var(--actual); font-size: 0.88rem; font-weight: 500;
+    border: 1px dashed color-mix(in srgb, var(--actual) 55%, transparent); background: color-mix(in srgb, var(--actual) 6%, transparent); color: var(--actual); font-size: 0.88rem; font-weight: 500;
   }
   .ms-form { background: var(--glass); border: 1px solid var(--border); border-radius: 16px; padding: 0.9rem; }
   .ms-list { display: flex; flex-direction: column; gap: 0.45rem; }
@@ -285,7 +288,7 @@
   .ev-card { display: flex; align-items: center; gap: 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 14px; padding: 0.6rem 0.7rem; }
   .ev-card.past { background: transparent; border-style: dashed; }
   .ev-card.past .ev-name { color: var(--muted); }
-  .ev-date.past { background: rgba(138,122,106,0.1); border-color: var(--border); }
+  .ev-date.past { background: color-mix(in srgb, var(--muted) 10%, transparent); border-color: var(--border); }
   .ev-date.past b { color: var(--goal1); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; }
   .ev-date.past span { font-size: 0.58rem; }
   .ev-past-toggle {
@@ -322,6 +325,32 @@
   .kc-bucket .bv { width: 4.6rem; text-align: right; font-family: 'Lora', serif; font-size: 0.9rem; }
   .kc-tip { font-size: 0.8rem; line-height: 1.45; background: rgba(90,181,160,0.08); border: 1px solid rgba(90,181,160,0.3); border-radius: 14px; padding: 0.65rem 0.8rem; margin-top: 0.3rem; }
   .kc-tip b { color: var(--goal1); }
+  .app { display: flex; flex-direction: column; }
+  .app > header { order: -100; }
+  .goals-win {
+    border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); padding: 1.1rem 1.2rem 0.7rem; margin-bottom: 1.25rem;
+    background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0) 40%), var(--card);
+  }
+  .goals-win .goal-item { background: var(--glass); padding: 0.7rem 0.85rem; margin-bottom: 0.5rem; }
+  .goals-win .goal-top { margin-bottom: 0.4rem; } .goals-win .goal-name b { font-size: 1rem; }
+  .goals-win .goal-dates { margin-top: 0.45rem; display: flex; gap: 1rem; font-size: 0.78rem; align-items: baseline; justify-content: space-between; }
+  .goals-win .hero-goals-head { margin-bottom: 0.7rem; }
+  .hero { padding-bottom: 1.2rem; } .hero .hero-chips { margin-bottom: 0; }
+  .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.8rem; }
+  .theme-sw { border: 2px solid var(--border); border-radius: 12px; padding: 0.45rem 0.3rem 0.35rem; cursor: pointer; text-align: center; font-size: 0.7rem; color: var(--muted); background: var(--glass); font-family: inherit; }
+  .theme-sw.on { border-color: var(--actual); color: var(--text); }
+  .theme-sw .sw { height: 26px; border-radius: 8px; margin-bottom: 0.3rem; display: flex; align-items: flex-end; justify-content: flex-end; padding: 4px; }
+  .theme-sw .sw i { width: 12px; height: 12px; border-radius: 50%; }
+  .accent-row { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; margin-bottom: 1.2rem; }
+  .accent-row input[type=color] { width: 42px; height: 32px; border: 1px solid var(--border); border-radius: 8px; background: none; padding: 2px; cursor: pointer; }
+  .layout-row { display: flex; align-items: center; gap: 0.4rem; background: var(--glass); border: 1px solid var(--border); border-radius: 12px; padding: 0.45rem 0.6rem; margin-bottom: 0.4rem; font-size: 0.85rem; }
+  .layout-row.off span.nm { color: var(--muted); text-decoration: line-through; }
+  .layout-row .nm { flex: 1; }
+  .layout-row button { background: none; border: 1px solid var(--border); color: var(--text); border-radius: 8px; width: 30px; height: 28px; cursor: pointer; }
+  .layout-row button:disabled { opacity: 0.3; }
+  .layout-row button.vis { width: 42px; font-size: 0.72rem; }
+  .layout-row.off button.vis { color: var(--muted); }
+  .goals-win .goal-dates .dot { margin-right: 0.35rem; }
   .menu-goals { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.5rem; }
   .menu-goals .input-group:last-child { grid-column: 1 / -1; }
   .goal-item { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.6rem; }
@@ -346,10 +375,10 @@
   }
 
   /* ═══ Design: einheitlicher Look passend zur Übersichtskarte ═══ */
-  :root { --glass: rgba(20,17,13,0.55); --radius: 20px; --shadow: 0 12px 32px rgba(0,0,0,0.28); }
+  :root { --glass: color-mix(in srgb, var(--bg) 62%, transparent); --radius: 20px; --shadow: 0 12px 32px rgba(0,0,0,0.28); }
   body {
     background:
-      radial-gradient(900px 520px at 110% -10%, rgba(232,131,90,0.10), transparent 60%),
+      radial-gradient(900px 520px at 110% -10%, color-mix(in srgb, var(--actual) 10%, transparent), transparent 60%),
       radial-gradient(700px 520px at -20% 105%, rgba(90,181,160,0.07), transparent 60%),
       var(--bg);
     background-attachment: fixed;
@@ -380,7 +409,7 @@
     border: none !important; border-radius: 999px; margin: 0; padding: 0.5rem 0.3rem; font-size: 0.76rem;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
   }
-  .tab.active { background: linear-gradient(135deg, #ee9a6c, #e07448); color: #1a1612; font-weight: 600; box-shadow: 0 4px 12px rgba(232,131,90,0.3); }
+  .tab.active { background: linear-gradient(135deg, var(--accent-hi), var(--accent-lo)); color: var(--on-accent); font-weight: 600; box-shadow: 0 4px 12px color-mix(in srgb, var(--actual) 30%, transparent); }
   .tab-content { padding: 1.2rem 1.1rem 1.1rem; }
 
   /* Eingaben & Buttons */
@@ -390,23 +419,23 @@
   .input-group label, .menu-goals label { font-size: 0.72rem; letter-spacing: 0.02em; }
   .btn {
     border-radius: 12px; padding: 0.64rem 1.15rem;
-    background: linear-gradient(135deg, #ee9a6c, #e07448); color: #1a1612; font-weight: 600;
-    box-shadow: 0 6px 16px rgba(232,131,90,0.28);
+    background: linear-gradient(135deg, var(--accent-hi), var(--accent-lo)); color: var(--on-accent); font-weight: 600;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--actual) 28%, transparent);
   }
   .btn-event { background: linear-gradient(135deg, #f5cf7a, #e6b24a); box-shadow: 0 6px 16px rgba(240,192,96,0.22); }
   .btn-sm { border-radius: 999px; padding: 0.28rem 0.7rem; background: var(--glass); }
 
   /* Tabellen */
   .data-table th { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; }
-  .data-table td { border-bottom-color: rgba(58,52,44,0.45); }
+  .data-table td { border-bottom-color: color-mix(in srgb, var(--border) 45%, transparent); }
   .month-row td { background: var(--glass); border-bottom: 1px solid var(--border); }
-  .month-row:hover td { background: rgba(232,131,90,0.07); }
+  .month-row:hover td { background: color-mix(in srgb, var(--actual) 7%, transparent); }
   .month-row.open td { color: var(--text); }
   .month-row.open .m-arrow { color: var(--actual); }
   .events-section-title { font-size: 0.68rem; letter-spacing: 0.08em; }
   .event-badge, .goal-badge, .ms-pill { border-radius: 12px; }
   .ms-img-wrap img { border-radius: 16px; }
-  .menu-panel { background: linear-gradient(180deg, rgba(232,131,90,0.08), rgba(232,131,90,0) 30%), var(--card); }
+  .menu-panel { background: linear-gradient(180deg, color-mix(in srgb, var(--actual) 8%, transparent), color-mix(in srgb, var(--actual) 0%, transparent) 30%), var(--card); }
   .menu-item { background: var(--glass); border-radius: 14px; }
   .empty-state { font-style: normal; }
   @media (max-width: 560px) {
@@ -491,7 +520,7 @@
     <p class="subtitle">Trage Messungen & Events ein – die Kurven aktualisieren sich automatisch</p>
   </header>
 
-  <div class="hero">
+  <div class="hero" data-win="hero">
     <div class="hero-top">
       <div>
         <div class="hero-label">Aktuell</div>
@@ -505,14 +534,17 @@
       <div class="chip"><div class="chip-val" id="statRate">–</div><div class="chip-lbl">pro Monat</div></div>
       <div class="chip"><div class="chip-val" id="statTotalDays">–</div><div class="chip-lbl">Tage dabei</div></div>
     </div>
+  </div>
+
+  <div class="goals-win" data-win="goals">
     <div class="hero-goals-head">
-      <span>Deine Ziele</span>
+      <span class="card-title" style="text-transform:none;letter-spacing:0">Deine Ziele</span>
       <button class="btn-sm" onclick="openMenu()">Anpassen</button>
     </div>
     <div id="goalBadges"></div>
   </div>
 
-  <div class="chart-card">
+  <div class="chart-card" data-win="chart">
     <div class="card-title">Verlauf</div>
     <div class="legend">
       <div class="legend-item"><div class="leg-line" style="background:var(--actual)"></div>Tatsächlich</div>
@@ -532,7 +564,7 @@
     <canvas id="chart" height="300"></canvas>
   </div>
 
-  <div class="input-card">
+  <div class="input-card" data-win="tabs">
     <div class="tabs">
       <button class="tab active" onclick="switchTab('weight', this)">⚖️ Messung</button>
       <button class="tab" onclick="switchTab('event', this)">📅 Event</button>
@@ -567,7 +599,7 @@
       <div class="input-row" style="margin-bottom:1rem;flex-wrap:wrap">
         <div class="input-group" style="flex:1 1 100%"><label>Zyklusstart (Tag 1 der Periode)</label><input type="date" id="cycleStartDate"></div>
         <div class="input-group" style="flex:1 1 140px"><label>Bezeichnung (optional)</label><input type="text" id="cycleName" placeholder="z.B. Jun '26"></div>
-        <button class="btn" style="background:linear-gradient(135deg,#6cc7b2,#4aa591);color:#1a1612;box-shadow:0 6px 16px rgba(90,181,160,0.25)" onclick="addCycle()">Hinzufügen</button>
+        <button class="btn" style="background:linear-gradient(135deg,#6cc7b2,#4aa591);color:var(--on-accent);box-shadow:0 6px 16px rgba(90,181,160,0.25)" onclick="addCycle()">Hinzufügen</button>
       </div>
       <div id="cycleTable"></div>
     </div>
@@ -628,7 +660,7 @@
 
       <div class="ms-chart-head"><span class="events-section-title" style="margin:0">Letzte 6 Wochen</span></div>
       <canvas id="kcChart" height="260"></canvas>
-      <div class="kc-leg"><span><i style="background:#5ab5a0"></i>deutlich drunter</span><span><i style="background:#f0c060"></i>knapp drunter</span><span><i style="background:#e05a5a"></i>drüber</span><span><i style="background:#8a7a6a;opacity:0.5"></i>heute / zählt nicht</span></div>
+      <div class="kc-leg"><span><i style="background:#5ab5a0"></i>deutlich drunter</span><span><i style="background:#f0c060"></i>knapp drunter</span><span><i style="background:#e05a5a"></i>drüber</span><span><i style="background:var(--muted);opacity:0.5"></i>heute / zählt nicht</span></div>
 
       <div class="events-section-title">Was bei dir funktioniert</div>
       <div id="kcInsight"></div>
@@ -657,6 +689,12 @@
       <input type="number" id="conservativeRate" value="1.5" step="0.1" min="0.5" max="5" oninput="saveGoals(); renderDebounced()"></div>
   </div>
   <div class="menu-foot" style="margin:0 0 1.2rem">Die konservative Rate ist dein vorsichtiges Wunschtempo für die grüne Prognose.</div>
+  <div class="menu-section">Aussehen</div>
+  <div class="theme-grid" id="themeGrid"></div>
+  <label class="accent-row">Eigene Akzentfarbe <input type="color" id="accentPick" oninput="setAccent(this.value)">
+    <a href="#" onclick="setAccent(null);return false" style="color:var(--muted);font-size:0.75rem">zurücksetzen</a></label>
+  <div class="menu-section">Anordnung</div>
+  <div id="layoutList" style="margin-bottom:1.2rem"></div>
   <div class="menu-section">Zusatzfunktionen</div>
   <label class="menu-item">
     <span><span class="menu-ico">📏</span>Körpermaße<small>Umfänge mit Verlauf, eigenes Bild</small></span>
@@ -671,6 +709,80 @@
 
 <script>
 let sb = null;
+
+// ── Aussehen: Farbthemen, eigene Akzentfarbe, Anordnung (pro Gerät gespeichert) ──
+const THEMES = {
+  warm:     { name: 'Warm',     bg: '#1a1612', card: '#242018', card2: '#2c2820', border: '#3a342c', text: '#f0ead8', muted: '#8a7a6a', accent: '#e8835a' },
+  ozean:    { name: 'Ozean',    bg: '#0e161e', card: '#15212c', card2: '#1b2936', border: '#2a3b4b', text: '#e5eef6', muted: '#7d93a7', accent: '#4fb3d9' },
+  wald:     { name: 'Wald',     bg: '#111813', card: '#18231c', card2: '#1e2c23', border: '#2d3f32', text: '#e7efe5', muted: '#839583', accent: '#7cc47f' },
+  beere:    { name: 'Beere',    bg: '#191118', card: '#231822', card2: '#2c1e2a', border: '#3e2b3b', text: '#f3e6ef', muted: '#9a8295', accent: '#e0689a' },
+  lavendel: { name: 'Lavendel', bg: '#15131c', card: '#1e1b28', card2: '#252132', border: '#363046', text: '#ece8f5', muted: '#8e87a3', accent: '#a78bfa' },
+  hell:     { name: 'Hell',     bg: '#f4efe8', card: '#fffdf9', card2: '#f6f0e8', border: '#e3d9cc', text: '#2b241d', muted: '#8a7b6b', accent: '#dd6f40' },
+};
+const T = {
+  a(hex, alpha) {
+    const h = (hex || '#000').replace('#', '');
+    const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+  }
+};
+function applyTheme() {
+  let key = 'warm', accent = null;
+  try { key = localStorage.getItem('wt_theme') || 'warm'; accent = localStorage.getItem('wt_accent'); } catch(e) {}
+  const th = THEMES[key] || THEMES.warm;
+  const root = document.documentElement.style;
+  const acc = accent || th.accent;
+  root.setProperty('--bg', th.bg); root.setProperty('--input-bg', th.bg);
+  root.setProperty('--card', th.card); root.setProperty('--card2', th.card2);
+  root.setProperty('--border', th.border); root.setProperty('--text', th.text); root.setProperty('--muted', th.muted);
+  root.setProperty('--actual', acc);
+  root.setProperty('--on-accent', key === 'hell' ? '#ffffff' : th.bg);
+  root.setProperty('--shadow', key === 'hell' ? '0 10px 28px rgba(80,60,40,0.10)' : '0 12px 32px rgba(0,0,0,0.28)');
+  document.documentElement.style.colorScheme = key === 'hell' ? 'light' : 'dark';
+  Object.assign(T, { accent: acc, card: th.card, border: th.border, text: th.text, muted: th.muted, bg: th.bg });
+  const meta = document.querySelector('meta[name=theme-color]'); if (meta) meta.content = th.bg;
+}
+applyTheme();
+function setTheme(key) { try { localStorage.setItem('wt_theme', key); } catch(e) {} applyTheme(); renderLookMenu(); if (typeof render === 'function' && entries.length) render(); }
+function setAccent(hex) {
+  try { hex ? localStorage.setItem('wt_accent', hex) : localStorage.removeItem('wt_accent'); } catch(e) {}
+  applyTheme(); renderLookMenu(); if (entries.length) render();
+}
+const WINDOWS = [ { id: 'hero', name: 'Übersicht' }, { id: 'goals', name: 'Ziele' }, { id: 'chart', name: 'Verlauf' }, { id: 'tabs', name: 'Einträge & Tabs' } ];
+function getLayout() {
+  let l = null; try { l = JSON.parse(localStorage.getItem('wt_layout') || 'null'); } catch(e) {}
+  const ids = WINDOWS.map(w => w.id);
+  if (!Array.isArray(l)) l = [];
+  l = l.filter(x => ids.includes(x.id));
+  ids.forEach(id => { if (!l.some(x => x.id === id)) l.push({ id, hidden: false }); });
+  return l;
+}
+function saveLayout(l) { try { localStorage.setItem('wt_layout', JSON.stringify(l)); } catch(e) {} applyLayout(); renderLookMenu(); if (entries.length) render(); }
+function applyLayout() {
+  getLayout().forEach((x, i) => {
+    const el = document.querySelector(`[data-win="${x.id}"]`);
+    if (el) { el.style.order = i; el.style.display = x.hidden ? 'none' : ''; }
+  });
+}
+function moveWin(i, d) { const l = getLayout(); const j = i + d; if (j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]]; saveLayout(l); }
+function toggleWin(i) { const l = getLayout(); l[i].hidden = !l[i].hidden; saveLayout(l); }
+function renderLookMenu() {
+  let key = 'warm', accent = null;
+  try { key = localStorage.getItem('wt_theme') || 'warm'; accent = localStorage.getItem('wt_accent'); } catch(e) {}
+  const grid = document.getElementById('themeGrid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(THEMES).map(([k, t]) => `<button class="theme-sw${k === key ? ' on' : ''}" onclick="setTheme('${k}')">
+    <div class="sw" style="background:linear-gradient(135deg, ${t.card}, ${t.bg});border:1px solid ${t.border}"><i style="background:${t.accent}"></i></div>${t.name}</button>`).join('');
+  document.getElementById('accentPick').value = accent || (THEMES[key] || THEMES.warm).accent;
+  const l = getLayout();
+  document.getElementById('layoutList').innerHTML = l.map((x, i) => {
+    const w = WINDOWS.find(v => v.id === x.id);
+    return `<div class="layout-row${x.hidden ? ' off' : ''}"><span class="nm">${w.name}</span>
+      <button onclick="moveWin(${i},-1)" ${i === 0 ? 'disabled' : ''} aria-label="nach oben">↑</button>
+      <button onclick="moveWin(${i},1)" ${i === l.length - 1 ? 'disabled' : ''} aria-label="nach unten">↓</button>
+      <button class="vis" onclick="toggleWin(${i})">${x.hidden ? 'aus' : 'an'}</button></div>`;
+  }).join('');
+}
 
 function store(key, val) {
   try { localStorage.setItem(key, val); } catch(e) {}
@@ -912,8 +1024,8 @@ function updateStats() {
   const r = 44, c = 2 * Math.PI * r;
   document.getElementById('heroRing').innerHTML = target === undefined ? '' : `
     <svg viewBox="0 0 104 104">
-      <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e8835a"/><stop offset="100%" stop-color="#5ab5a0"/></linearGradient></defs>
-      <circle cx="52" cy="52" r="${r}" fill="none" stroke="#3a342c" stroke-width="9"/>
+      <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${T.accent}"/><stop offset="100%" stop-color="#5ab5a0"/></linearGradient></defs>
+      <circle cx="52" cy="52" r="${r}" fill="none" stroke="${T.border}" stroke-width="9"/>
       <circle cx="52" cy="52" r="${r}" fill="none" stroke="url(#ringGrad)" stroke-width="9" stroke-linecap="round"
         stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - pct / 100)).toFixed(1)}"/>
     </svg>
@@ -921,6 +1033,7 @@ function updateStats() {
 }
 
 function openMenu() {
+  renderLookMenu();
   document.getElementById('menuPanel').classList.add('open');
   document.getElementById('menuBackdrop').classList.add('open');
   document.getElementById('menuPanel').setAttribute('aria-hidden', 'false');
@@ -1165,9 +1278,9 @@ function drawChart() {
 
   for (let k = Math.ceil(minKg); k <= Math.floor(maxKg); k++) {
     if (k % 2 !== 0 && kgRange > 10) continue;
-    ctx.strokeStyle = '#3a342c'; ctx.lineWidth = 1; ctx.setLineDash([]);
+    ctx.strokeStyle = T.border; ctx.lineWidth = 1; ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(ml, yOf(k)); ctx.lineTo(ml+cW, yOf(k)); ctx.stroke();
-    ctx.fillStyle = '#8a7a6a'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
+    ctx.fillStyle = T.muted; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
     ctx.fillText(k, ml-6, yOf(k)+4);
   }
 
@@ -1179,11 +1292,11 @@ function drawChart() {
     ctx.restore();
   });
 
-  ctx.strokeStyle = '#3a342c'; ctx.lineWidth = 1; ctx.setLineDash([]);
+  ctx.strokeStyle = T.border; ctx.lineWidth = 1; ctx.setLineDash([]);
   ctx.beginPath(); ctx.moveTo(ml,mt); ctx.lineTo(ml,mt+cH); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(ml,mt+cH); ctx.lineTo(ml+cW,mt+cH); ctx.stroke();
 
-  ctx.fillStyle = '#8a7a6a'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = T.muted; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center';
   const mnames = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
   // Nur so viele Monate beschriften, wie nebeneinander passen (auf dem Handy z.B. jeden 3.)
   const pxPerMonth = cW * 30.44 / totalDays;
@@ -1228,7 +1341,7 @@ function drawChart() {
   fillUnder(trendPts, '#e05a8a');
   if (actualPts.length >= 2) {
     const baseY = yOf(minKg);
-    ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = '#e8835a';
+    ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = T.accent;
     ctx.beginPath(); ctx.moveTo(actualPts[0][0], baseY);
     actualPts.forEach(p => ctx.lineTo(p[0],p[1]));
     ctx.lineTo(actualPts[actualPts.length-1][0], baseY);
@@ -1239,7 +1352,7 @@ function drawChart() {
   dashedLine(trendPts, '#e05a8a');
 
   if (actualPts.length >= 2) {
-    ctx.save(); ctx.strokeStyle = '#e8835a'; ctx.lineWidth = 2.5;
+    ctx.save(); ctx.strokeStyle = T.accent; ctx.lineWidth = 2.5;
     ctx.setLineDash([]); ctx.lineJoin='round'; ctx.lineCap='round';
     ctx.beginPath(); actualPts.forEach((p,i) => i===0 ? ctx.moveTo(p[0],p[1]) : ctx.lineTo(p[0],p[1]));
     ctx.stroke(); ctx.restore();
@@ -1252,9 +1365,9 @@ function drawChart() {
     const isLast = i === s.length-1;
     if (!dense || isLast) {
       ctx.save();
-      if (isLast) { ctx.fillStyle = 'rgba(232,131,90,0.25)'; ctx.beginPath(); ctx.arc(x,y,9,0,Math.PI*2); ctx.fill(); }
-      ctx.fillStyle = isLast ? '#e8835a' : '#1f1b16';
-      ctx.strokeStyle = '#e8835a'; ctx.lineWidth = 2;
+      if (isLast) { ctx.fillStyle = T.a(T.accent,0.25); ctx.beginPath(); ctx.arc(x,y,9,0,Math.PI*2); ctx.fill(); }
+      ctx.fillStyle = isLast ? T.accent : T.card;
+      ctx.strokeStyle = T.accent; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(x,y,isLast ? 4.5 : 3,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
     }
     if (i===0 || isLast) {
@@ -1262,9 +1375,9 @@ function drawChart() {
       ctx.save(); ctx.font = '600 10.5px DM Sans,sans-serif';
       const tw = ctx.measureText(txt).width + 12;
       const lx = Math.min(Math.max(x, ml + tw/2), ml + cW - tw/2), ly = y - 18;
-      ctx.fillStyle = 'rgba(26,22,18,0.85)'; ctx.strokeStyle = 'rgba(232,131,90,0.6)'; ctx.lineWidth = 1;
+      ctx.fillStyle = T.a(T.card,0.92); ctx.strokeStyle = T.a(T.accent,0.6); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.roundRect ? ctx.roundRect(lx - tw/2, ly - 9, tw, 18, 9) : ctx.rect(lx - tw/2, ly - 9, tw, 18); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#f0ead8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = T.text; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(txt, lx, ly + 0.5); ctx.restore();
     }
   });
@@ -1272,7 +1385,7 @@ function drawChart() {
   function endDot(pts, color, label) {
     if (pts.length < 2) return;
     const [x,y] = pts[pts.length-1];
-    ctx.save(); ctx.fillStyle='#1f1b16'; ctx.strokeStyle=color; ctx.lineWidth=2.5;
+    ctx.save(); ctx.fillStyle=T.card; ctx.strokeStyle=color; ctx.lineWidth=2.5;
     ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
     ctx.fillStyle=color; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='center';
     ctx.fillText(label, x, y-9); ctx.restore();
@@ -1294,7 +1407,7 @@ function drawChart() {
       if (past) {
         const w = s.filter(e => e.date <= ev.date).pop();
         if (w) {
-          ctx.save(); ctx.fillStyle = '#f0c060'; ctx.strokeStyle = '#1f1b16'; ctx.lineWidth = 2;
+          ctx.save(); ctx.fillStyle = '#f0c060'; ctx.strokeStyle = T.card; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.arc(x, yOf(w.kg), 4.5, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
         }
       } else {
@@ -1322,9 +1435,9 @@ function drawChart() {
     ctx.restore();
   }
 
-  ctx.save(); ctx.strokeStyle='#e8835a'; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.globalAlpha=0.3;
+  ctx.save(); ctx.strokeStyle=T.accent; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.globalAlpha=0.3;
   ctx.beginPath(); ctx.moveTo(xOf(lastDate),mt); ctx.lineTo(xOf(lastDate),mt+cH); ctx.stroke(); ctx.restore();
-  ctx.fillStyle='#e8835a'; ctx.font='9px DM Sans,sans-serif'; ctx.textAlign='center'; ctx.globalAlpha=0.7;
+  ctx.fillStyle=T.accent; ctx.font='9px DM Sans,sans-serif'; ctx.textAlign='center'; ctx.globalAlpha=0.7;
   ctx.fillText('Heute', xOf(lastDate), H-mb+26); ctx.globalAlpha=1;
 }
 
@@ -1688,7 +1801,7 @@ function drawMeasureChart() {
   const s = msSeries(key);
   ctx.font = '11px DM Sans,sans-serif';
   if (!s.length) {
-    ctx.fillStyle = '#8a7a6a'; ctx.textAlign = 'center';
+    ctx.fillStyle = T.muted; ctx.textAlign = 'center';
     ctx.fillText('Noch keine Werte für diese Messung', W/2, H/2);
     return;
   }
@@ -1707,26 +1820,26 @@ function drawMeasureChart() {
   const step = (hi - lo) > 12 ? 5 : (hi - lo) > 5 ? 2 : 1;
   ctx.textAlign = 'right';
   for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
-    ctx.strokeStyle = '#3a342c'; ctx.lineWidth = 1;
+    ctx.strokeStyle = T.border; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(ml, yOf(v)); ctx.lineTo(ml + cW, yOf(v)); ctx.stroke();
-    ctx.fillStyle = '#8a7a6a'; ctx.fillText(v, ml - 6, yOf(v) + 4);
+    ctx.fillStyle = T.muted; ctx.fillText(v, ml - 6, yOf(v) + 4);
   }
   // Datumsachse (erste, letzte)
   ctx.textAlign = 'left';  ctx.fillText(formatDate(s[0].date), ml, H - 10);
   if (s.length > 1) { ctx.textAlign = 'right'; ctx.fillText(formatDate(s[s.length-1].date), ml + cW, H - 10); }
 
   // Linie + Punkte
-  ctx.strokeStyle = '#e8835a'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+  ctx.strokeStyle = T.accent; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
   ctx.beginPath();
   s.forEach((p, i) => { const x = xOf(p.date), y = yOf(p.v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
   ctx.stroke();
   s.forEach(p => {
-    ctx.fillStyle = '#e8835a';
+    ctx.fillStyle = T.accent;
     ctx.beginPath(); ctx.arc(xOf(p.date), yOf(p.v), 3.5, 0, Math.PI * 2); ctx.fill();
   });
   // Letzten Wert beschriften
   const lp = s[s.length-1];
-  ctx.fillStyle = '#f0ead8'; ctx.font = '12px Lora,serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = T.text; ctx.font = '12px Lora,serif'; ctx.textAlign = 'center';
   ctx.fillText(msFmt(lp.v) + ' cm', Math.min(Math.max(xOf(lp.date), ml + 24), ml + cW - 24), yOf(lp.v) - 10);
 }
 
@@ -2101,31 +2214,31 @@ function drawKcalChart() {
     const yOf = v => mt + (1 - (v - lo) / (hi - lo)) * wH;
     ctx.textAlign = 'right';
     for (let v = Math.ceil(lo); v <= hi; v++) {
-      ctx.strokeStyle = '#3a342c'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ml, yOf(v)); ctx.lineTo(ml + cW, yOf(v)); ctx.stroke();
-      ctx.fillStyle = '#8a7a6a'; ctx.fillText(v, ml - 5, yOf(v) + 3);
+      ctx.strokeStyle = T.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ml, yOf(v)); ctx.lineTo(ml + cW, yOf(v)); ctx.stroke();
+      ctx.fillStyle = T.muted; ctx.fillText(v, ml - 5, yOf(v) + 3);
     }
-    ctx.strokeStyle = '#e8835a'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.beginPath();
+    ctx.strokeStyle = T.accent; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.beginPath();
     s.forEach((e, i) => { const x = xOf(days.indexOf(e.date)); i ? ctx.lineTo(x, yOf(e.kg)) : ctx.moveTo(x, yOf(e.kg)); });
     ctx.stroke();
-    const l = s[s.length-1]; ctx.fillStyle = '#e8835a'; ctx.beginPath(); ctx.arc(xOf(days.indexOf(l.date)), yOf(l.kg), 3.5, 0, Math.PI * 2); ctx.fill();
+    const l = s[s.length-1]; ctx.fillStyle = T.accent; ctx.beginPath(); ctx.arc(xOf(days.indexOf(l.date)), yOf(l.kg), 3.5, 0, Math.PI * 2); ctx.fill();
   }
   // Kalorien-Balken
   const bTop = mt + wH + gap, kmax = Math.max(ref * 1.35, ...vals.filter((v, i) => true), 1);
-  ctx.textAlign = 'left'; ctx.fillStyle = '#8a7a6a'; ctx.fillText('kcal pro Tag', ml, bTop - 7);
+  ctx.textAlign = 'left'; ctx.fillStyle = T.muted; ctx.fillText('kcal pro Tag', ml, bTop - 7);
   const bw = Math.max(2, cW / days.length - 2);
   days.forEach((d, i) => {
     const k = kmap[d]; if (k === undefined) return;
     const h = Math.min(k, kmax) / kmax * bH;
     const partial = d === today, faded = partial || skipd[d];
-    ctx.fillStyle = faded ? '#8a7a6a' : kcColor(k, ref); ctx.globalAlpha = faded ? 0.4 : 0.85;
+    ctx.fillStyle = faded ? T.muted : kcColor(k, ref); ctx.globalAlpha = faded ? 0.4 : 0.85;
     ctx.beginPath(); ctx.roundRect ? ctx.roundRect(xOf(i) - bw/2, bTop + bH - h, bw, h, 2) : ctx.rect(xOf(i) - bw/2, bTop + bH - h, bw, h); ctx.fill();
     ctx.globalAlpha = 1;
   });
   const ty = bTop + bH - ref / kmax * bH;
-  ctx.save(); ctx.strokeStyle = 'rgba(240,234,216,0.5)'; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(ml, ty); ctx.lineTo(ml + cW, ty); ctx.stroke(); ctx.restore();
-  ctx.fillStyle = 'rgba(240,234,216,0.75)'; ctx.textAlign = 'right';
+  ctx.save(); ctx.strokeStyle = T.a(T.text,0.5); ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(ml, ty); ctx.lineTo(ml + cW, ty); ctx.stroke(); ctx.restore();
+  ctx.fillStyle = T.a(T.text,0.75); ctx.textAlign = 'right';
   ctx.fillText((tdee ? 'Verbrauch ~' : 'Ø ') + kcFmt(ref), ml + cW, ty - 4);
-  ctx.fillStyle = '#8a7a6a'; ctx.textAlign = 'left'; ctx.fillText(formatDate(days[0]), ml, H - 4);
+  ctx.fillStyle = T.muted; ctx.textAlign = 'left'; ctx.fillText(formatDate(days[0]), ml, H - 4);
   ctx.textAlign = 'right'; ctx.fillText(kcToday !== null ? 'heute (bisher)' : 'heute', ml + cW, H - 4);
 }
 
@@ -2167,6 +2280,7 @@ function initMeasureFeature() {
 
   initMeasureFeature();
   initKcalFeature();
+  applyLayout();
 })();
 </script>
 </div></div>
