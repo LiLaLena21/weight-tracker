@@ -372,6 +372,35 @@
   .layout-row button.vis { width: 42px; font-size: 0.72rem; }
   .layout-row.off button.vis { color: var(--muted); }
   .goals-win .goal-dates .dot { margin-right: 0.35rem; }
+  .menu-head { position: relative; }
+  .menu-back { display: none; background: none; border: none; color: var(--text); font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 0.4rem 0 0; }
+  .menu-panel.sub .menu-back { display: block; }
+  #menuTitle { flex: 1; }
+  .menu-page { display: none; animation: menuIn 0.18s ease; }
+  .menu-page.active { display: block; }
+  @keyframes menuIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+  .nav-item, .profile-card {
+    display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; cursor: pointer; text-decoration: none;
+    background: var(--glass); border: 1px solid var(--border); border-radius: 14px; padding: 0.7rem 0.8rem; margin-bottom: 0.45rem;
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+  }
+  .nav-ico { width: 2rem; height: 2rem; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; color: var(--actual);
+    background: color-mix(in srgb, var(--actual) 14%, transparent); }
+  .nav-ico svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-txt { flex: 1; min-width: 0; } .nav-txt small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 0.1rem; }
+  .nav-chev { color: var(--muted); font-size: 1.2rem; }
+  .nav-item.danger { color: var(--danger); } .nav-item.danger .nav-ico { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+  .profile-card { padding: 0.85rem; margin-bottom: 1rem; background: linear-gradient(135deg, color-mix(in srgb, var(--actual) 16%, transparent), var(--glass)); }
+  .profile-card b { font-family: 'Lora', serif; font-size: 1.05rem; font-weight: 600; }
+  .avatar { width: 2.8rem; height: 2.8rem; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-family: 'Lora', serif; font-size: 1.2rem; font-weight: 600;
+    background: linear-gradient(135deg, var(--accent-hi), var(--accent-lo)); color: var(--on-accent); }
+  .pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .menu-form { display: flex; flex-direction: column; gap: 0.8rem; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--glass); }
+  .seg button { border: none; background: none; color: var(--muted); border-radius: 999px; padding: 0.45rem; font-family: inherit; cursor: pointer; }
+  .seg button.on { background: linear-gradient(135deg, var(--accent-hi), var(--accent-lo)); color: var(--on-accent); font-weight: 600; }
+  .conn-box { background: var(--glass); border: 1px solid var(--border); border-radius: 14px; padding: 0.8rem; }
+  .conn-host { font-size: 0.9rem; margin-top: 0.2rem; overflow-wrap: anywhere; }
   .menu-goals { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.5rem; }
   .menu-goals .input-group:last-child { grid-column: 1 / -1; }
   .goal-item { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.6rem; }
@@ -560,7 +589,7 @@
   <div class="goals-win" data-win="goals">
     <div class="hero-goals-head">
       <span class="card-title" style="text-transform:none;letter-spacing:0">Deine Ziele</span>
-      <button class="btn-sm" onclick="openMenu()">Anpassen</button>
+      <button class="btn-sm" onclick="openMenu('goals')">Anpassen</button>
     </div>
     <div id="goalBadges"></div>
   </div>
@@ -697,10 +726,42 @@
 <div class="menu-backdrop" id="menuBackdrop" onclick="closeMenu()"></div>
 <aside class="menu-panel" id="menuPanel" aria-hidden="true">
   <div class="menu-head">
-    <span>Menü</span>
+    <button class="menu-back" id="menuBack" onclick="showMenuPage('main')" aria-label="Zurück">‹</button>
+    <span id="menuTitle">Menü</span>
     <button class="menu-close" onclick="closeMenu()" aria-label="Schließen">✕</button>
   </div>
-  <div class="menu-section">Ziele</div>
+
+  <div class="menu-page active" data-page="main">
+    <button class="profile-card" onclick="showMenuPage('profile')">
+      <span class="avatar" id="menuAvatar">?</span>
+      <span class="nav-txt"><b id="menuName">Profil</b><small>Profil bearbeiten</small></span><span class="nav-chev">›</span>
+    </button>
+    <div class="menu-section">Einstellungen</div>
+    <button class="nav-item " onclick="showMenuPage('goals')"><span class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></svg></span><span class="nav-txt">Ziele<small>Zielgewichte und Tempo</small></span><span class="nav-chev">›</span></button>
+    <button class="nav-item " onclick="showMenuPage('look')"><span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.9-.7-1.3-.7-2.2 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4c0-4.4-4-8.5-9-8.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg></span><span class="nav-txt">Aussehen<small>Farbthema und Akzentfarbe</small></span><span class="nav-chev">›</span></button>
+    <button class="nav-item " onclick="showMenuPage('layout')"><span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="6" rx="2"/><rect x="4" y="14" width="16" height="6" rx="2"/></svg></span><span class="nav-txt">Anordnung<small>Bereiche verschieben und ausblenden</small></span><span class="nav-chev">›</span></button>
+    <button class="nav-item " onclick="showMenuPage('features')"><span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M12 3l2.3 5.4L20 9.3l-4.3 3.8 1.3 5.7L12 16l-5 2.8 1.3-5.7L4 9.3l5.7-.9z"/></svg></span><span class="nav-txt">Zusatzfunktionen<small>Körpermaße, Kalorien</small></span><span class="nav-chev">›</span></button>
+    <button class="nav-item " onclick="showMenuPage('connection')"><span class="nav-ico"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></span><span class="nav-txt">Verbindung<small>Supabase-Datenbank</small></span><span class="nav-chev">›</span></button>
+    <div class="menu-section">Mehr</div>
+    <a class="nav-item" href="../food-tracker/"><span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M7 4v14M3 14l4 4 4-4M17 20V6M13 10l4-4 4 4"/></svg></span><span class="nav-txt">Food Tracker öffnen<small>Kalorien und Essen</small></span><span class="nav-chev">↗</span></a>
+    <button class="nav-item danger" onclick="logout()"><span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg></span><span class="nav-txt">Ausloggen<small>Verbindung auf diesem Gerät trennen</small></span><span class="nav-chev">›</span></button>
+  </div>
+
+  <div class="menu-page" data-page="profile">
+    <div class="menu-form">
+      <div class="input-group"><label>Name</label><input type="text" id="pfName"></div>
+      <div class="input-group"><label>Geschlecht</label>
+        <div class="seg"><button id="pfW" onclick="pfSetGender('w')">Weiblich</button><button id="pfM" onclick="pfSetGender('m')">Männlich</button></div></div>
+      <div class="pf-grid">
+        <div class="input-group"><label>Alter</label><input type="number" id="pfAge" min="10" max="120"></div>
+        <div class="input-group"><label>Größe (cm)</label><input type="number" id="pfHeight" min="100" max="250"></div>
+      </div>
+      <button class="btn" style="width:100%" onclick="saveProfileMenu()">Speichern</button>
+      <div class="menu-foot" style="margin-top:0.6rem">Das Geschlecht bestimmt u. a. den Zyklus-Tab und die Standardfigur bei den Maßen.</div>
+    </div>
+  </div>
+
+  <div class="menu-page" data-page="goals">
   <div class="menu-goals">
     <div class="input-group"><label>Ziel 1 (kg)</label>
       <input type="number" id="goal1Input" value="75" step="0.5" min="40" max="200" oninput="saveGoals(); renderDebounced()"></div>
@@ -710,13 +771,22 @@
       <input type="number" id="conservativeRate" value="1.5" step="0.1" min="0.5" max="5" oninput="saveGoals(); renderDebounced()"></div>
   </div>
   <div class="menu-foot" style="margin:0 0 1.2rem">Die konservative Rate ist dein vorsichtiges Wunschtempo für die grüne Prognose.</div>
-  <div class="menu-section">Aussehen</div>
+    <div class="menu-foot">Die konservative Rate ist dein vorsichtiges Wunschtempo für die grüne Prognose.</div>
+  </div>
+
+  <div class="menu-page" data-page="look">
   <div class="theme-grid" id="themeGrid"></div>
   <label class="accent-row">Eigene Akzentfarbe <input type="color" id="accentPick" oninput="setAccent(this.value)">
     <a href="#" onclick="setAccent(null);return false" style="color:var(--muted);font-size:0.75rem">zurücksetzen</a></label>
-  <div class="menu-section">Anordnung</div>
-  <div id="layoutList" style="margin-bottom:1.2rem"></div>
-  <div class="menu-section">Zusatzfunktionen</div>
+    <div class="menu-foot" style="margin-top:-0.6rem">Gilt auch für den Food Tracker auf diesem Gerät.</div>
+  </div>
+
+  <div class="menu-page" data-page="layout">
+    <div id="layoutList"></div>
+    <div class="menu-foot" style="margin-top:0.4rem">Die Anordnung gilt nur für dieses Gerät.</div>
+  </div>
+
+  <div class="menu-page" data-page="features">
   <label class="menu-item">
     <span><span class="menu-ico">📏</span>Körpermaße<small>Umfänge mit Verlauf, eigenes Bild</small></span>
     <input type="checkbox" class="switch" id="optMeasure" onchange="toggleMeasureFeature(this.checked)">
@@ -725,7 +795,14 @@
     <span><span class="menu-ico">🔥</span>Kalorien<small>Tageskalorien neben dem Gewicht, mit Auswertung</small></span>
     <input type="checkbox" class="switch" id="optKcal" onchange="toggleKcalFeature(this.checked)">
   </label>
-  <div class="menu-foot">Die Auswahl gilt nur für dieses Gerät.</div>
+    <div class="menu-foot">Die Auswahl gilt nur für dieses Gerät.</div>
+  </div>
+
+  <div class="menu-page" data-page="connection">
+    <div class="conn-box"><div class="menu-foot">Verbunden mit</div><div id="connHost" class="conn-host">–</div></div>
+    <button class="btn" style="width:100%;margin-top:0.8rem" onclick="changeConnection()">Verbindung ändern</button>
+    <div class="menu-foot" style="margin-top:0.6rem">Deine Einträge liegen in deiner Supabase-Datenbank. URL und Key sind nur auf diesem Gerät gespeichert.</div>
+  </div>
 </aside>
 
 <script>
@@ -1080,7 +1157,54 @@ function updateStats() {
     <div class="ring-txt"><div class="ring-pct">${Math.round(pct)} %</div><div class="ring-sub">${next !== undefined ? 'bis ' + deNum(target, target % 1 ? 1 : 0) + ' kg' : 'alle Ziele<br>erreicht ✓'}</div></div>`;
 }
 
-function openMenu() {
+const MENU_TITLES = { main: 'Menü', profile: 'Profil', goals: 'Ziele', look: 'Aussehen', layout: 'Anordnung', features: 'Zusatzfunktionen', connection: 'Verbindung' };
+function showMenuPage(id) {
+  document.querySelectorAll('.menu-page').forEach(p => p.classList.toggle('active', p.dataset.page === id));
+  document.getElementById('menuTitle').textContent = MENU_TITLES[id] || 'Menü';
+  document.getElementById('menuPanel').classList.toggle('sub', id !== 'main');
+  if (id === 'profile') pfFill();
+  if (id === 'look' || id === 'layout') renderLookMenu();
+  if (id === 'connection') { const u = retrieve('wt_url') || ''; document.getElementById('connHost').textContent = u ? u.replace(/^https?:\/\//, '') : 'nicht verbunden'; }
+}
+function renderMenuProfile() {
+  const n = (userProfile && userProfile.name) || '';
+  document.getElementById('menuName').textContent = n || 'Profil';
+  document.getElementById('menuAvatar').textContent = n ? n.trim()[0].toUpperCase() : '?';
+}
+let pfGender = 'w';
+function pfSetGender(g) { pfGender = g; document.getElementById('pfW').classList.toggle('on', g === 'w'); document.getElementById('pfM').classList.toggle('on', g === 'm'); }
+function pfFill() {
+  document.getElementById('pfName').value = userProfile.name || '';
+  document.getElementById('pfAge').value = userProfile.age || '';
+  document.getElementById('pfHeight').value = userProfile.height || '';
+  pfSetGender(userProfile.gender === 'm' ? 'm' : 'w');
+}
+function saveProfileMenu() {
+  const name = document.getElementById('pfName').value.trim();
+  if (!name) { document.getElementById('pfName').focus(); return; }
+  const genderChanged = userProfile.gender !== pfGender;
+  Object.assign(userProfile, { name, gender: pfGender, age: document.getElementById('pfAge').value, height: document.getElementById('pfHeight').value });
+  store('wt_profile', JSON.stringify(userProfile));
+  applyProfile(); renderMenuProfile();
+  if (genderChanged && msEnabled) { msBuildInputs(); loadMeasureImage(); updateMeasure(); }
+  showMenuPage('main');
+}
+function forget(key) { try { localStorage.removeItem(key); } catch(e) {} document.cookie = key + '=;path=/;max-age=0;SameSite=Lax'; }
+function logout() {
+  if (!confirm('Auf diesem Gerät ausloggen? Deine Daten bleiben in Supabase, du musst dich danach nur neu verbinden.')) return;
+  forget('wt_url'); forget('wt_key');
+  location.reload();
+}
+function changeConnection() {
+  closeMenu();
+  document.getElementById('setupUrl').value = retrieve('wt_url') || '';
+  document.getElementById('setupKey').value = retrieve('wt_key') || '';
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('setupScreen').style.display = 'flex';
+}
+
+function openMenu(page) {
+  showMenuPage(page || 'main'); renderMenuProfile();
   renderLookMenu();
   document.getElementById('menuPanel').classList.add('open');
   document.getElementById('menuBackdrop').classList.add('open');
