@@ -1948,6 +1948,10 @@ function kcAll() {
   });
 }
 function kcUsed() { return kcAll().filter(e => !e.skip); }
+// Für die Auswertung zählen nur die letzten 8 Wochen: der Verbrauch ändert sich mit dem Gewicht,
+// alte Daten würden das Bild verfälschen
+const KC_WINDOW_DAYS = 56;
+function kcRecent() { const from = kcIsoDay(-KC_WINDOW_DAYS); return kcUsed().filter(e => e.date >= from); }
 
 async function addKcal() {
   if (!sb) return;
@@ -1984,7 +1988,7 @@ function kcDailyWeights() {
 // Tagesschwankungen (Wasser, Salz) mitteln sich so weitgehend raus.
 function kcAnalyse() {
   const w = kcDailyWeights();
-  const kmap = {}; kcUsed().forEach(e => { kmap[e.date] = e.kcal; });
+  const kmap = {}; kcRecent().forEach(e => { kmap[e.date] = e.kcal; });
   const avgW = iso => {                    // 3-Tage-Mittel um einen Tag, glättet Ausreißer
     const d = parseDate(iso), v = [];
     for (let o = -1; o <= 1; o++) { const x = new Date(d); x.setDate(x.getDate() + o); const k = x.toISOString().slice(0,10); if (w[k] !== undefined) v.push(w[k]); }
@@ -2027,7 +2031,7 @@ function updateKcal() {
   document.getElementById('kcSource').textContent = kcHasFood ? 'inkl. Food Tracker' : '';
   if (!document.getElementById('kcDate').value) document.getElementById('kcDate').value = kcIsoDay(-1);
 
-  const all = kcAll(), used = kcUsed();
+  const all = kcAll(), used = kcRecent();
   const { wins, tdee } = kcAnalyse();
   const ref = tdee || (used.length ? used.reduce((a, e) => a + e.kcal, 0) / used.length : 2000);
 
@@ -2035,7 +2039,7 @@ function updateKcal() {
   const ins = document.getElementById('kcInsight');
   const kDays = used.length;
   if (wins.length < 8) {
-    ins.innerHTML = `<div class="empty-state">Ab etwa 2 Wochen mit Kalorien und Gewicht gibt es hier eine Auswertung (bisher ${kDays} ${kDays === 1 ? 'Tag' : 'Tage'}).</div>`;
+    ins.innerHTML = `<div class="empty-state">Was bei dir funktioniert, sehen wir, sobald genug Werte da sind. Dafür braucht es etwa 2 Wochen am Stück mit Kalorien und Gewicht aus den letzten 8 Wochen (bisher ${kDays} ${kDays === 1 ? 'Tag' : 'Tage'}).</div>`;
   } else {
     const ks = wins.map(p => p.kcal).sort((a, b) => a - b);
     const q = f => Math.round(ks[Math.floor(f * (ks.length - 1))] / 50) * 50;
@@ -2054,8 +2058,10 @@ function updateKcal() {
         <div class="bar"><i style="width:${Math.max(4, Math.abs(b.wk) / maxAbs * 100).toFixed(0)}%;background:${col}"></i></div>
         <div class="bv" style="color:${col}">${b.wk > 0.05 ? '+' : b.wk < -0.05 ? '−' : '±'}${deNum(Math.abs(b.wk))} kg</div></div>`;
     }).join('') + `<div class="ms-edit-hint" style="text-align:left">Gewichtsveränderung pro Woche, je nachdem wie viel du im Schnitt gegessen hast. Gerechnet wird mit 7-Tage-Zeiträumen, die sich überschneiden.</div>`
-      + `<div class="ms-edit-hint" style="text-align:left">Grundlage: ${used.length} Tage vom ${formatDate(used[0].date)} bis ${formatDate(used[used.length-1].date)}${all.length > used.length ? `, ohne ${all.length - used.length} Ausnahmetage bzw. Tage unter ${kcFmt(KC_MIN_DAY)} kcal` : ''}. Die Drittel ergeben sich aus deinen eigenen Werten.</div>`
-      + (tdee ? `<div class="kc-tip">Dein Verbrauch liegt grob bei <b>${kcFmt(tdee)} kcal</b> am Tag. Darunter nimmst du ab, darüber stagniert oder steigt dein Gewicht.</div>` : '');
+      + `<div class="ms-edit-hint" style="text-align:left">Grundlage: ${used.length} Tage aus den letzten 8 Wochen (${formatDate(used[0].date)} bis ${formatDate(used[used.length-1].date)}), ohne Ausnahmetage und Tage unter ${kcFmt(KC_MIN_DAY)} kcal. Die Drittel ergeben sich aus deinen eigenen Werten.</div>`
+      + (tdee ? `<div class="kc-tip">${buckets.every(b => b.wk <= -0.1)
+          ? `In allen Bereichen hast du abgenommen. Rechnerisch liegt dein Verbrauch grob bei <b>${kcFmt(tdee)} kcal</b> am Tag.`
+          : `Rechnerisch liegt dein Verbrauch grob bei <b>${kcFmt(tdee)} kcal</b> am Tag. Darunter nimmst du ab, darüber stagniert oder steigt dein Gewicht.`}</div>` : '');
   }
 
   // Liste der letzten Tage
