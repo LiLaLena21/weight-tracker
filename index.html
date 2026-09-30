@@ -4,11 +4,15 @@
 <meta charset="UTF-8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Eigenes dunkles Design: verhindert, dass der automatische Dunkelmodus des Browsers Farben umrechnet -->
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#1a1612">
 <title>Gewichts-Tracker</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap');
 
   :root {
+    color-scheme: dark;
     --bg: #1a1612; --card: #242018; --card2: #2c2820; --border: #3a342c;
     --actual: #e8835a; --trend: #e05a8a; --prognose: #5ab5a0;
     --goal1: #5ab5a0; --goal2: #4a8fa0; --event: #f0c060;
@@ -85,7 +89,7 @@
     width: 100%; outline: none; transition: border-color 0.2s;
   }
   input:focus { border-color: var(--actual); }
-  input[type="date"] { color-scheme: dark; cursor: pointer; }
+  input[type="date"] { cursor: pointer; }
 
   .btn {
     background: var(--actual); color: #fff; border: none; border-radius: 8px;
@@ -738,7 +742,10 @@ function applyTheme() {
   root.setProperty('--actual', acc);
   root.setProperty('--on-accent', key === 'hell' ? '#ffffff' : th.bg);
   root.setProperty('--shadow', key === 'hell' ? '0 10px 28px rgba(80,60,40,0.10)' : '0 12px 32px rgba(0,0,0,0.28)');
-  document.documentElement.style.colorScheme = key === 'hell' ? 'light' : 'dark';
+  const scheme = key === 'hell' ? 'only light' : 'dark';
+  document.documentElement.style.colorScheme = scheme;
+  const csMeta = document.querySelector('meta[name=color-scheme]'); if (csMeta) csMeta.content = scheme;
+  const tcMeta = document.querySelector('meta[name=theme-color]'); if (tcMeta) tcMeta.content = th.bg;
   Object.assign(T, { accent: acc, card: th.card, border: th.border, text: th.text, muted: th.muted, bg: th.bg });
   const meta = document.querySelector('meta[name=theme-color]'); if (meta) meta.content = th.bg;
 }
