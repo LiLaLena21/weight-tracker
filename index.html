@@ -356,9 +356,9 @@
     <div class="tab-content" id="tab-cycle">
       <h2>Zyklusvergleich</h2>
       <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">Durchschnittsgewicht pro Zykluswoche – Vergleich über Monate.</p>
-      <div class="input-row" style="margin-bottom:1rem;">
-        <div class="input-group"><label>Zyklusstart (Tag 1 der Periode)</label><input type="date" id="cycleStartDate"></div>
-        <div class="input-group" style="max-width:160px"><label>Bezeichnung (optional)</label><input type="text" id="cycleName" placeholder="z.B. Jun '26"></div>
+      <div class="input-row" style="margin-bottom:1rem;flex-wrap:wrap">
+        <div class="input-group" style="flex:1 1 100%"><label>Zyklusstart (Tag 1 der Periode)</label><input type="date" id="cycleStartDate"></div>
+        <div class="input-group" style="flex:1 1 140px"><label>Bezeichnung (optional)</label><input type="text" id="cycleName" placeholder="z.B. Jun '26"></div>
         <button class="btn" style="background:var(--prognose);color:#1a1612" onclick="addCycle()">Hinzufügen</button>
       </div>
       <div id="cycleTable"></div>
@@ -838,11 +838,15 @@ function drawChart() {
 
   ctx.fillStyle = '#8a7a6a'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center';
   const mnames = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  // Nur so viele Monate beschriften, wie nebeneinander passen (auf dem Handy z.B. jeden 3.)
+  const pxPerMonth = cW * 30.44 / totalDays;
+  const mStep = [1,2,3,4,6,12].find(n => n * pxPerMonth >= 46) || 12;
   let md = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
   while (md <= maxDate) {
     md.setMonth(md.getMonth()+1);
+    if (md.getMonth() % mStep !== 0) continue;
     const x = xOf(md);
-    if (x > ml+10 && x < ml+cW-10) ctx.fillText(mnames[md.getMonth()]+' '+String(md.getFullYear()).slice(2), x, H-mb+14);
+    if (x > ml+16 && x < ml+cW-16) ctx.fillText(mnames[md.getMonth()]+' '+String(md.getFullYear()).slice(2), x, H-mb+14);
   }
 
   function dashedLine(pts, color, dash) {
@@ -974,14 +978,23 @@ function updateCycleTable() {
   if (!el) return;
   if (cycles.length === 0) { el.innerHTML = '<div class="empty-state">Noch keine Zyklen eingetragen</div>'; return; }
   const displayCycles = cycles.slice(-3);
-  const weekLabels = ['Woche 1 (Periode)', 'Woche 2', 'Woche 3', 'Woche 4'];
+  const weekLabels = ['Woche 1<div style="font-size:0.68rem">Periode</div>', 'Woche 2', 'Woche 3', 'Woche 4'];
+  const avgOf = arr => { const v = arr.filter(x => x !== null); return v.length ? v.reduce((a,b) => a+b, 0) / v.length : null; };
+  // Eine Spalte pro Zyklus; die Veränderung zum Vormonat steht klein unter dem Wert
+  const cell = (avg, prevAvg, italic) => {
+    if (avg === null) return `<td style="color:var(--muted)">–</td>`;
+    let diff = '';
+    if (prevAvg !== null && prevAvg !== undefined) {
+      const d = avg - prevAvg;
+      diff = `<div class="${d < 0 ? 'diff-neg' : 'diff-pos'}" style="font-family:'DM Sans',sans-serif">${d > 0 ? '+' : ''}${d.toFixed(2)}</div>`;
+    }
+    return `<td class="kg"${italic ? ' style="font-style:italic"' : ''}>${avg.toFixed(2)}${diff}</td>`;
+  };
   let html = '<table class="data-table" style="font-size:0.8rem;table-layout:fixed"><thead><tr>';
-  html += '<th style="width:30%">Zykluswoche</th>';
+  html += '<th style="width:28%">Woche</th>';
   displayCycles.forEach(c => {
-    const fullIdx = cycles.indexOf(c);
-    const prev = fullIdx > 0 ? cycles[fullIdx - 1] : null;
-    html += `<th style="color:var(--actual)">${c.name} <button class="btn-sm" style="margin-left:4px" onclick="removeCycle(${c.id})">✕</button></th>`;
-    html += `<th style="color:var(--prognose);font-size:0.7rem">${prev ? 'vs. ' + prev.name : ''}</th>`;
+    html += `<th style="color:var(--actual);vertical-align:bottom"><div style="overflow-wrap:anywhere">${c.name}</div>
+      <button class="btn-sm" style="padding:0.05rem 0.4rem;margin-top:0.25rem;font-size:0.68rem" onclick="removeCycle(${c.id})">✕</button></th>`;
   });
   html += '</tr></thead><tbody>';
   for (let w = 1; w <= 4; w++) {
@@ -989,17 +1002,7 @@ function updateCycleTable() {
     displayCycles.forEach(c => {
       const fullIdx = cycles.indexOf(c);
       const prev = fullIdx > 0 ? cycles[fullIdx - 1] : null;
-      const avg = cycleWeekAvg(c.start, w);
-      html += avg !== null ? `<td class="kg">${avg.toFixed(2)} kg</td>` : `<td style="color:var(--muted)">–</td>`;
-      if (prev) {
-        const prevAvg = cycleWeekAvg(prev.start, w);
-        if (avg !== null && prevAvg !== null) {
-          const diff = avg - prevAvg;
-          const cls = diff < 0 ? 'diff-neg' : 'diff-pos';
-          const sign = diff > 0 ? '+' : '';
-          html += `<td><span class="${cls}">${sign}${diff.toFixed(2)}</span></td>`;
-        } else { html += `<td style="color:var(--muted)">–</td>`; }
-      } else { html += `<td></td>`; }
+      html += cell(cycleWeekAvg(c.start, w), prev ? cycleWeekAvg(prev.start, w) : null, false);
     });
     html += '</tr>';
   }
@@ -1007,21 +1010,12 @@ function updateCycleTable() {
   displayCycles.forEach(c => {
     const fullIdx = cycles.indexOf(c);
     const prev = fullIdx > 0 ? cycles[fullIdx - 1] : null;
-    const ws = [1,2,3,4].map(w => cycleWeekAvg(c.start, w)).filter(v => v !== null);
-    const avg = ws.length > 0 ? ws.reduce((s,v) => s+v, 0) / ws.length : null;
-    html += avg !== null ? `<td class="kg" style="font-style:italic">${avg.toFixed(2)} kg</td>` : `<td style="color:var(--muted)">–</td>`;
-    if (prev) {
-      const pws = [1,2,3,4].map(w => cycleWeekAvg(prev.start, w)).filter(v => v !== null);
-      const prevAvg = pws.length > 0 ? pws.reduce((s,v) => s+v, 0) / pws.length : null;
-      if (avg !== null && prevAvg !== null) {
-        const diff = avg - prevAvg;
-        const cls = diff < 0 ? 'diff-neg' : 'diff-pos';
-        const sign = diff > 0 ? '+' : '';
-        html += `<td><span class="${cls}">${sign}${diff.toFixed(2)}</span></td>`;
-      } else { html += `<td style="color:var(--muted)">–</td>`; }
-    } else { html += `<td></td>`; }
+    const avg = avgOf([1,2,3,4].map(w => cycleWeekAvg(c.start, w)));
+    const prevAvg = prev ? avgOf([1,2,3,4].map(w => cycleWeekAvg(prev.start, w))) : null;
+    html += cell(avg, prevAvg, true);
   });
   html += '</tr></tbody></table>';
+  html += '<div style="font-size:0.7rem;color:var(--muted);margin-top:0.5rem">Werte in kg, darunter die Veränderung zum Vormonat.</div>';
   el.innerHTML = html;
 }
 
