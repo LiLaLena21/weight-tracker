@@ -280,6 +280,20 @@
   .ms-entry-vals .n { color: var(--muted); font-size: 0.72rem; margin-right: 0.2rem; }
   .ms-entry-vals b { font-family: 'Lora', serif; font-weight: 500; }
   .ms-entry-act { display: flex; gap: 0.3rem; }
+  .ev-list { display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.4rem; }
+  .ev-list .events-section-title { margin: 0.8rem 0 0.2rem; }
+  .ev-card { display: flex; align-items: center; gap: 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 14px; padding: 0.6rem 0.7rem; }
+  .ev-card.past { opacity: 0.92; }
+  .ev-date { flex-shrink: 0; width: 3.1rem; text-align: center; border-radius: 10px; padding: 0.3rem 0; background: rgba(240,192,96,0.1); border: 1px solid rgba(240,192,96,0.3); }
+  .ev-date b { display: block; font-family: 'Lora', serif; font-size: 1.15rem; line-height: 1.1; color: var(--event); }
+  .ev-date span { font-size: 0.62rem; color: var(--muted); }
+  .ev-main { flex: 1; min-width: 0; }
+  .ev-name { font-size: 0.88rem; overflow-wrap: anywhere; }
+  .ev-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; }
+  .ev-vals { text-align: right; font-size: 0.82rem; white-space: nowrap; line-height: 1.35; }
+  .ev-vals span:not([class]) { font-size: 0.66rem; color: var(--muted); }
+  .ev-kg { font-family: 'Lora', serif; font-size: 0.95rem; }
+  .ev-del { padding: 0.15rem 0.45rem; }
   .menu-goals { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.5rem; }
   .menu-goals .input-group:last-child { grid-column: 1 / -1; }
   .goal-item { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.6rem; }
@@ -516,10 +530,7 @@
         <div class="input-group" style="flex:2"><label>Bezeichnung</label><input type="text" id="eventName" placeholder="z.B. Hochzeit Jana, Urlaub Mallorca…"></div>
         <button class="btn btn-event" onclick="addEvent()">Eintragen</button>
       </div>
-      <table class="data-table">
-        <thead><tr><th>Datum</th><th>Event</th><th>Tatsächlich</th><th>Prognose (trend)</th><th>Prognose (konservativ)</th><th></th></tr></thead>
-        <tbody id="eventBody"></tbody>
-      </table>
+      <div id="eventBody" class="ev-list"></div>
     </div>
     <div class="tab-content" id="tab-cycle">
       <h2>Zyklusvergleich</h2>
@@ -943,42 +954,63 @@ function updateTable() {
   }).join('');
 }
 
+// Kommende Events mit Prognose (vom aktuellen Gewicht aus, wie in der Kurve),
+// vergangene Events mit dem tatsächlichen Gewicht und der Veränderung zum Event davor
+let showAllPastEvents = false;
 function updateEventTable() {
+  const box = document.getElementById('eventBody');
+  const evs = sortedEvents();
+  if (!evs.length) { box.innerHTML = '<div class="empty-state">Noch keine Events eingetragen</div>'; return; }
   const s = sorted();
   const last = s[s.length-1];
   const rate = calcRate();
-  const tbody = document.getElementById('eventBody');
-  const evs = sortedEvents();
-  if (!evs.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Noch keine Events eingetragen</td></tr>'; return; }
+  const cons = getConservativeRate();
   const today = new Date().toISOString().slice(0,10);
-  tbody.innerHTML = evs.map(ev => {
-    const startEntry = sorted()[0];
-    const daysSinceStart = (parseDate(ev.date) - parseDate(startEntry.date)) / 86400000;
-    const g1val = parseFloat(document.getElementById("goal1Input").value) || 75;
-    const g2val = parseFloat(document.getElementById("goal2Input").value) || 69;
-    const floor = Math.min(g1val, g2val);
-    const proKgRaw = startEntry.kg - (daysSinceStart / 30) * getConservativeRate();
-    const proStr = Math.max(proKgRaw, floor).toFixed(1) + ' kg';
-    const trendKgRaw = rate > 0 ? projectedKg(last.kg, last.date, ev.date, rate) : null;
-    const trendStr = trendKgRaw !== null ? trendKgRaw.toFixed(1) + ' kg' : '–';
-    const eventPassed = ev.date <= today;
-    const sortedAll = [...entries].sort((a,b) => a.date.localeCompare(b.date));
-    const closestEntry = sortedAll.filter(e => e.date <= ev.date).pop();
-    let cols = '';
-    if (eventPassed && closestEntry) {
-      cols = `<td style="color:var(--actual);font-weight:500">${closestEntry.kg.toFixed(2)} kg</td><td style="color:var(--trend)">${trendStr}</td><td style="color:var(--prognose)">${proStr}</td>`;
-    } else if (eventPassed) {
-      cols = `<td style="color:var(--muted)">kein Eintrag</td><td style="color:var(--trend)">${trendStr}</td><td style="color:var(--prognose)">${proStr}</td>`;
-    } else {
-      cols = `<td style="color:var(--muted)">–</td><td style="color:var(--trend)">${trendStr}</td><td style="color:var(--prognose)">${proStr}</td>`;
-    }
-    return `<tr>
-      <td>${formatDate(ev.date)}</td>
-      <td><span class="event-dot"></span>${ev.name}</td>
-      ${cols}
-      <td><button class="btn-sm" onclick="removeEvent('${ev.id}')">✕</button></td>
-    </tr>`;
-  }).join('');
+  const mon = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const dateBadge = d => { const x = parseDate(d); return `<div class="ev-date"><b>${x.getDate()}</b><span>${mon[x.getMonth()]} ${String(x.getFullYear()).slice(2)}</span></div>`; };
+  const del = ev => `<button class="btn-sm ev-del" onclick="removeEvent('${ev.id}')">✕</button>`;
+  const weightAt = d => s.filter(e => e.date <= d).pop();
+
+  const upcoming = evs.filter(ev => ev.date > today);
+  const past = evs.filter(ev => ev.date <= today).reverse();
+  let html = '';
+
+  if (upcoming.length) {
+    html += '<div class="events-section-title">Kommende Events</div>';
+    html += upcoming.map(ev => {
+      const days = daysBetween(today, ev.date);
+      const t = last && rate > 0 ? projectedKg(last.kg, last.date, ev.date, rate) : null;
+      const c = last ? projectedKg(last.kg, last.date, ev.date, cons) : null;
+      return `<div class="ev-card">${dateBadge(ev.date)}
+        <div class="ev-main"><div class="ev-name">${ev.name}</div><div class="ev-sub">${days === 1 ? 'morgen' : 'in ' + days + ' Tagen'}</div></div>
+        <div class="ev-vals">
+          ${t !== null ? `<div style="color:var(--trend)">${deNum(t)} kg <span>Trend</span></div>` : ''}
+          ${c !== null ? `<div style="color:var(--prognose)">${deNum(c)} kg <span>konservativ</span></div>` : ''}
+        </div>${del(ev)}</div>`;
+    }).join('');
+  }
+
+  if (past.length) {
+    html += '<div class="events-section-title">Vergangene Events</div>';
+    const shown = showAllPastEvents ? past : past.slice(0, 4);
+    html += shown.map(ev => {
+      const w = weightAt(ev.date);
+      const idx = evs.indexOf(ev);
+      const prevEv = idx > 0 ? evs[idx - 1] : null;
+      const pw = prevEv ? weightAt(prevEv.date) : null;
+      let diff = '';
+      if (w && pw) {
+        const d = w.kg - pw.kg;
+        diff = `<span class="${d < 0 ? 'diff-neg' : 'diff-pos'}">${d > 0 ? '+' : '−'}${deNum(Math.abs(d), 2)}</span>`;
+      }
+      const approx = w && daysBetween(w.date, ev.date) > 3 ? `<div class="ev-sub">Messung vom ${formatDate(w.date)}</div>` : '';
+      return `<div class="ev-card past">${dateBadge(ev.date)}
+        <div class="ev-main"><div class="ev-name">${ev.name}</div>${approx}</div>
+        <div class="ev-vals">${w ? `<div class="ev-kg">${deNum(w.kg, 2)} kg</div><div>${diff}</div>` : '<div style="color:var(--muted)">kein Eintrag</div>'}</div>${del(ev)}</div>`;
+    }).join('');
+    if (past.length > 4) html += `<button class="ms-add-toggle" style="margin-top:0.3rem" onclick="showAllPastEvents=!showAllPastEvents;updateEventTable()">${showAllPastEvents ? 'Weniger anzeigen' : 'Alle ' + past.length + ' vergangenen anzeigen'}</button>`;
+  }
+  box.innerHTML = html;
 }
 
 function updateGoalBadges() {
