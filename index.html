@@ -236,6 +236,35 @@
   .month-row .m-meta { color: var(--muted); font-size: 0.72rem; }
   .month-row .m-arrow { display: inline-block; width: 1em; color: var(--muted); transition: transform 0.15s; }
   .month-row.open .m-arrow { transform: rotate(90deg); }
+  .hero {
+    position: relative; overflow: hidden; border-radius: 20px; padding: 1.3rem 1.2rem 1.1rem; margin-bottom: 1.25rem;
+    border: 1px solid var(--border);
+    background:
+      radial-gradient(120% 90% at 100% 0%, rgba(232,131,90,0.22) 0%, rgba(232,131,90,0) 55%),
+      radial-gradient(90% 80% at 0% 100%, rgba(90,181,160,0.14) 0%, rgba(90,181,160,0) 60%),
+      var(--card);
+  }
+  .hero-top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  .hero-label { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+  .hero-kg { font-family: 'Lora', serif; font-size: 3rem; line-height: 1.05; font-weight: 600; margin-top: 0.15rem; }
+  .hero-kg small { font-size: 1.1rem; font-weight: 400; color: var(--muted); margin-left: 0.3rem; }
+  .hero-date { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+  .hero-ring { flex-shrink: 0; width: 104px; height: 104px; position: relative; }
+  .hero-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .hero-ring .ring-txt { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .hero-ring .ring-pct { font-family: 'Lora', serif; font-size: 1.35rem; font-weight: 600; line-height: 1; }
+  .hero-ring .ring-sub { font-size: 0.62rem; color: var(--muted); margin-top: 0.25rem; line-height: 1.2; }
+  .hero-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 1.1rem 0 1rem; }
+  .chip { background: rgba(26,22,18,0.55); border: 1px solid var(--border); border-radius: 12px; padding: 0.55rem 0.6rem; text-align: center; }
+  .chip-val { font-family: 'Lora', serif; font-size: 1.05rem; }
+  .chip-lbl { font-size: 0.66rem; color: var(--muted); margin-top: 0.1rem; }
+  .hero-goals-head { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+  .hero-goals-head .btn-sm { text-transform: none; letter-spacing: 0; }
+  .hero .goal-item { background: rgba(26,22,18,0.55); padding: 0.7rem 0.85rem; margin-bottom: 0.5rem; }
+  .hero .goal-top { margin-bottom: 0.4rem; }
+  .hero .goal-name b { font-size: 1rem; }
+  .hero .goal-dates { margin-top: 0.45rem; display: flex; gap: 1rem; font-size: 0.78rem; }
+  .hero .goal-dates span.dot { margin-right: 0.3rem; }
   .menu-goals { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.5rem; }
   .menu-goals .input-group:last-child { grid-column: 1 / -1; }
   .goal-item { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.6rem; }
@@ -331,22 +360,26 @@
     <p class="subtitle">Trage Messungen & Events ein – die Kurven aktualisieren sich automatisch</p>
   </header>
 
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-label">Aktuell</div>
-      <div class="stat-value" id="statCurrent">–</div>
-      <div class="stat-sub" id="statCurrentDate">–</div>
+  <div class="hero">
+    <div class="hero-top">
+      <div>
+        <div class="hero-label">Aktuell</div>
+        <div class="hero-kg"><span id="statCurrent">–</span><small>kg</small></div>
+        <div class="hero-date" id="statCurrentDate">–</div>
+      </div>
+      <div class="hero-ring" id="heroRing"></div>
     </div>
-    <div class="stat">
-      <div class="stat-label">Abnahme gesamt</div>
-      <div class="stat-value" id="statTotal">–</div>
-      <div class="stat-sub" id="statTotalDays">–</div>
+    <div class="hero-chips">
+      <div class="chip"><div class="chip-val" id="statTotal">–</div><div class="chip-lbl">seit Start</div></div>
+      <div class="chip"><div class="chip-val" id="statRate">–</div><div class="chip-lbl">pro Monat</div></div>
+      <div class="chip"><div class="chip-val" id="statTotalDays">–</div><div class="chip-lbl">Tage dabei</div></div>
     </div>
-    <div class="stat">
-      <div class="stat-label">Tempo (Ø/Monat)</div>
-      <div class="stat-value" id="statRate">–</div>
-      <div class="stat-sub">auf Basis aller Einträge</div>
+    <div class="hero-goals-head">
+      <span>Deine Ziele</span>
+      <button class="btn-sm" onclick="openMenu()">Anpassen</button>
     </div>
+    <div id="goalBadges"></div>
+  </div>
   </div>
 
   <div class="chart-card">
@@ -452,13 +485,6 @@
     </div>
   </div>
 
-  <div class="goals-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;margin-bottom:1rem">
-      <h2 style="margin:0">Deine Ziele</h2>
-      <button class="btn-sm" onclick="openMenu()">Anpassen</button>
-    </div>
-    <div id="goalBadges"></div>
-  </div>
 </div>
 
 <!-- Menü: Platz für Zusatzfunktionen -->
@@ -707,18 +733,34 @@ function addEvent() {
 }
 function removeEvent(id) { dbRemoveEvent(id); }
 
+const deNum = (v, d = 1) => v.toFixed(d).replace('.', ',');
 function updateStats() {
   const s = sorted();
   if (!s.length) return;
   const first = s[0], last = s[s.length-1];
-  document.getElementById('statCurrent').textContent = last.kg.toFixed(2) + ' kg';
-  document.getElementById('statCurrentDate').textContent = formatDate(last.date);
+  document.getElementById('statCurrent').textContent = deNum(last.kg, 2);
+  document.getElementById('statCurrentDate').textContent = 'gemessen am ' + formatDate(last.date);
   const diff = first.kg - last.kg;
-  document.getElementById('statTotal').textContent = (diff >= 0 ? '-' : '+') + Math.abs(diff).toFixed(2) + ' kg';
-  const days = daysBetween(first.date, last.date);
-  document.getElementById('statTotalDays').textContent = `in ${days} Tagen`;
+  document.getElementById('statTotal').innerHTML = `<span class="${diff >= 0 ? 'diff-neg' : 'diff-pos'}" style="font-size:inherit">${diff >= 0 ? '−' : '+'}${deNum(Math.abs(diff))} kg</span>`;
+  document.getElementById('statTotalDays').textContent = daysBetween(first.date, last.date);
   const rate = calcRate();
-  document.getElementById('statRate').textContent = (rate >= 0 ? '-' : '+') + Math.abs(rate).toFixed(2) + ' kg';
+  document.getElementById('statRate').textContent = (rate >= 0 ? '−' : '+') + deNum(Math.abs(rate)) + ' kg';
+  // Ring: Fortschritt zum nächsten noch offenen Ziel
+  const goals = [parseFloat(document.getElementById('goal1Input').value), parseFloat(document.getElementById('goal2Input').value)]
+    .filter(g => !isNaN(g)).sort((a, b) => b - a);
+  const next = goals.find(g => last.kg > g);
+  const target = next !== undefined ? next : goals[goals.length - 1];
+  let pct = 100;
+  if (next !== undefined && first.kg > target) pct = Math.max(0, Math.min(100, (first.kg - last.kg) / (first.kg - target) * 100));
+  const r = 44, c = 2 * Math.PI * r;
+  document.getElementById('heroRing').innerHTML = target === undefined ? '' : `
+    <svg viewBox="0 0 104 104">
+      <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e8835a"/><stop offset="100%" stop-color="#5ab5a0"/></linearGradient></defs>
+      <circle cx="52" cy="52" r="${r}" fill="none" stroke="#3a342c" stroke-width="9"/>
+      <circle cx="52" cy="52" r="${r}" fill="none" stroke="url(#ringGrad)" stroke-width="9" stroke-linecap="round"
+        stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - pct / 100)).toFixed(1)}"/>
+    </svg>
+    <div class="ring-txt"><div class="ring-pct">${Math.round(pct)} %</div><div class="ring-sub">${next !== undefined ? 'bis ' + deNum(target, target % 1 ? 1 : 0) + ' kg' : 'alle Ziele<br>erreicht ✓'}</div></div>`;
 }
 
 function openMenu() {
@@ -866,7 +908,11 @@ function updateGoalBadges() {
 
   const start = s[0].kg;
   const cons = getConservativeRate();
-  const shortMonth = str => str.replace(/^(\S+) (\d{4})$/, (m, mo, y) => mo + ' ' + y);
+  const short = (kg, target, r) => {
+    const t = arrivalStr(kg, target, r, last.date);
+    const m = t.match(/^(\S+) (\d{4})$/);
+    return m ? m[1].slice(0, 3) + ' ' + m[2] : t;
+  };
   let html = '';
   [g1, g2].forEach((g, i) => {
     if (isNaN(g)) return;
@@ -877,17 +923,16 @@ function updateGoalBadges() {
     html += `
       <div class="goal-item">
         <div class="goal-top">
-          <span class="goal-name">Ziel ${i + 1}<b>${String(g).replace('.', ',')} kg</b></span>
-          <span class="goal-left">${reached ? 'erreicht ✓' : 'noch ' + left.toFixed(1).replace('.', ',') + ' kg · ' + Math.round(pct) + ' %'}</span>
+          <span class="goal-name">Ziel ${i + 1}<b>${deNum(g, g % 1 ? 1 : 0)} kg</b></span>
+          <span class="goal-left">${reached ? 'erreicht ✓' : 'noch ' + deNum(left) + ' kg · ' + Math.round(pct) + ' %'}</span>
         </div>
         <div class="goal-bar"><div style="width:${pct.toFixed(1)}%"></div></div>
         ${reached ? '' : `<div class="goal-dates">
-          <div><div class="gd-label"><span class="dot" style="background:var(--trend)"></span>Aktuelles Tempo</div><div class="gd-val">${shortMonth(arrivalStr(last.kg, g, rate, last.date))}</div></div>
-          <div><div class="gd-label"><span class="dot" style="background:var(--prognose)"></span>Konservativ</div><div class="gd-val">${shortMonth(arrivalStr(last.kg, g, cons, last.date))}</div></div>
+          <span><span class="dot" style="background:var(--trend)"></span>${short(last.kg, g, rate)} <span style="color:var(--muted)">Trend</span></span>
+          <span><span class="dot" style="background:var(--prognose)"></span>${short(last.kg, g, cons)} <span style="color:var(--muted)">konservativ</span></span>
         </div>`}
       </div>`;
   });
-  html += `<div class="goal-foot">Bisher ${rate.toFixed(1).replace('.', ',')} kg pro Monat · konservativ gerechnet mit ${cons.toFixed(1).replace('.', ',')} kg · Start ${start.toFixed(1).replace('.', ',')} kg</div>`;
   document.getElementById('goalBadges').innerHTML = html;
 }
 
