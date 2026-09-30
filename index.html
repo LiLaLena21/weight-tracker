@@ -283,7 +283,19 @@
   .ev-list { display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.4rem; }
   .ev-list .events-section-title { margin: 0.8rem 0 0.2rem; }
   .ev-card { display: flex; align-items: center; gap: 0.75rem; background: var(--glass); border: 1px solid var(--border); border-radius: 14px; padding: 0.6rem 0.7rem; }
-  .ev-card.past { opacity: 0.92; }
+  .ev-card.past { background: transparent; border-style: dashed; }
+  .ev-card.past .ev-name { color: var(--muted); }
+  .ev-date.past { background: rgba(138,122,106,0.1); border-color: var(--border); }
+  .ev-date.past b { color: var(--goal1); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; }
+  .ev-date.past span { font-size: 0.58rem; }
+  .ev-past-toggle {
+    display: flex; align-items: center; gap: 0.4rem; width: 100%; margin-top: 0.8rem; padding: 0.6rem 0.2rem;
+    background: none; border: none; border-top: 1px solid var(--border); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  }
+  .ev-past-toggle .m-arrow { transition: transform 0.15s; }
+  .ev-past-toggle.open .m-arrow { transform: rotate(90deg); color: var(--actual); }
+  .ev-count { background: var(--glass); border: 1px solid var(--border); border-radius: 999px; padding: 0 0.45rem; letter-spacing: 0; }
   .ev-date { flex-shrink: 0; width: 3.1rem; text-align: center; border-radius: 10px; padding: 0.3rem 0; background: rgba(240,192,96,0.1); border: 1px solid rgba(240,192,96,0.3); }
   .ev-date b { display: block; font-family: 'Lora', serif; font-size: 1.15rem; line-height: 1.1; color: var(--event); }
   .ev-date span { font-size: 0.62rem; color: var(--muted); }
@@ -996,24 +1008,25 @@ function updateEventTable() {
   }
 
   if (past.length) {
-    html += '<div class="events-section-title">Vergangene Events</div>';
-    const shown = showAllPastEvents ? past : past.slice(0, 4);
-    html += shown.map(ev => {
+    html += `<button class="ev-past-toggle${showAllPastEvents ? ' open' : ''}" onclick="showAllPastEvents=!showAllPastEvents;updateEventTable()">
+      <span class="m-arrow">▸</span> Vergangene Events <span class="ev-count">${past.length}</span></button>`;
+    if (showAllPastEvents) html += past.map(ev => {
       const w = weightAt(ev.date);
       const idx = evs.indexOf(ev);
       const prevEv = idx > 0 ? evs[idx - 1] : null;
       const pw = prevEv ? weightAt(prevEv.date) : null;
-      let diff = '';
-      if (w && pw) {
+      let change = '';
+      if (w && pw && pw !== w) {
         const d = w.kg - pw.kg;
-        diff = `<span class="${d < 0 ? 'diff-neg' : 'diff-pos'}">${d > 0 ? '+' : '−'}${deNum(Math.abs(d), 2)}</span>`;
+        change = `<div class="ev-sub"><span class="${d < 0 ? 'diff-neg' : 'diff-pos'}">${d > 0 ? '+' : '−'}${deNum(Math.abs(d), 2)} kg</span> seit ${prevEv.name}</div>`;
+      } else if (!prevEv) {
+        change = `<div class="ev-sub">erstes Event</div>`;
       }
-      const approx = w && daysBetween(w.date, ev.date) > 3 ? `<div class="ev-sub">Messung vom ${formatDate(w.date)}</div>` : '';
-      return `<div class="ev-card past">${dateBadge(ev.date)}
-        <div class="ev-main"><div class="ev-name">${ev.name}</div>${approx}</div>
-        <div class="ev-vals">${w ? `<div class="ev-kg">${deNum(w.kg, 2)} kg</div><div>${diff}</div>` : '<div style="color:var(--muted)">kein Eintrag</div>'}</div>${del(ev)}</div>`;
+      const when = w && daysBetween(w.date, ev.date) > 3 ? `Messung ${formatDate(w.date)}` : 'am Tag';
+      return `<div class="ev-card past"><div class="ev-date past"><b>✓</b><span>${formatDate(ev.date)}</span></div>
+        <div class="ev-main"><div class="ev-name">${ev.name}</div>${change}</div>
+        <div class="ev-vals">${w ? `<div class="ev-kg">${deNum(w.kg, 2)} kg</div><div class="ev-cons">${when}</div>` : '<div class="ev-cons">kein Eintrag</div>'}</div>${del(ev)}</div>`;
     }).join('');
-    if (past.length > 4) html += `<button class="ms-add-toggle" style="margin-top:0.3rem" onclick="showAllPastEvents=!showAllPastEvents;updateEventTable()">${showAllPastEvents ? 'Weniger anzeigen' : 'Alle ' + past.length + ' vergangenen anzeigen'}</button>`;
   }
   box.innerHTML = html;
 }
