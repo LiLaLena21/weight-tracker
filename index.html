@@ -1402,7 +1402,7 @@ function renderDebounced() { clearTimeout(renderTimer); renderTimer = setTimeout
 function render() {
   updateStats(); updateTable(); updateEventTable(); updateGoalBadges(); updateCycleTable(); drawChart();
   if (msEnabled) drawMeasureChart();
-  if (kcEnabled) drawKcalChart();
+  if (kcEnabled) updateKcal();   // neu berechnen, sobald Gewichte da sind (Farben/Verbrauch hängen davon ab)
 }
 
 // Datumsfelder: Kalender beim Antippen direkt öffnen (manche Handy-Browser markieren sonst nur die Jahreszahl)
@@ -2001,7 +2001,7 @@ function kcAnalyse() {
     if (w0 === undefined || w1 === undefined) return;
     wins.push({ kcal: ks.reduce((a, b) => a + b, 0) / ks.length, wk: w1 - w0 });
   });
-  if (wins.length < 3) return { wins, tdee: null };
+  if (wins.length < 8) return { wins, tdee: null };   // zu wenig Daten: lieber keine Schätzung zeigen
   // Verbrauch: Ø kcal + Ø Wochenverlust in kcal / 7
   const aK = wins.reduce((a, x) => a + x.kcal, 0) / wins.length;
   const aW = wins.reduce((a, x) => a + x.wk, 0) / wins.length;
