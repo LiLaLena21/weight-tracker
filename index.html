@@ -293,6 +293,11 @@
   .ev-vals { text-align: right; font-size: 0.82rem; white-space: nowrap; line-height: 1.35; }
   .ev-vals span:not([class]) { font-size: 0.66rem; color: var(--muted); }
   .ev-kg { font-family: 'Lora', serif; font-size: 0.95rem; }
+  .hero .goal-dates { align-items: baseline; justify-content: space-between; }
+  .gd-main { color: var(--muted); }
+  .gd-main b { color: var(--text); font-weight: 600; font-size: 0.9rem; }
+  .gd-cons { font-size: 0.68rem; color: var(--muted); opacity: 0.85; }
+  .ev-cons { font-size: 0.68rem; color: var(--muted); }
   .ev-del { padding: 0.15rem 0.45rem; }
   .menu-goals { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.5rem; }
   .menu-goals .input-group:last-child { grid-column: 1 / -1; }
@@ -984,8 +989,8 @@ function updateEventTable() {
       return `<div class="ev-card">${dateBadge(ev.date)}
         <div class="ev-main"><div class="ev-name">${ev.name}</div><div class="ev-sub">${days === 1 ? 'morgen' : 'in ' + days + ' Tagen'}</div></div>
         <div class="ev-vals">
-          ${t !== null ? `<div style="color:var(--trend)">${deNum(t)} kg <span>Trend</span></div>` : ''}
-          ${c !== null ? `<div style="color:var(--prognose)">${deNum(c)} kg <span>konservativ</span></div>` : ''}
+          ${t !== null ? `<div class="ev-kg" style="color:var(--trend)">${deNum(t)} kg</div>` : ''}
+          ${c !== null ? `<div class="ev-cons">${t !== null ? 'konservativ ' : ''}${deNum(c)} kg</div>` : ''}
         </div>${del(ev)}</div>`;
     }).join('');
   }
@@ -1050,8 +1055,8 @@ function updateGoalBadges() {
         </div>
         <div class="goal-bar"><div style="width:${pct.toFixed(1)}%"></div></div>
         ${reached ? '' : `<div class="goal-dates">
-          <span><span class="dot" style="background:var(--trend)"></span>${short(last.kg, g, rate)} <span style="color:var(--muted)">Trend</span></span>
-          <span><span class="dot" style="background:var(--prognose)"></span>${short(last.kg, g, cons)} <span style="color:var(--muted)">konservativ</span></span>
+          <span class="gd-main"><span class="dot" style="background:var(--trend)"></span>voraussichtlich <b>${short(last.kg, g, rate)}</b></span>
+          <span class="gd-cons">konservativ ${short(last.kg, g, cons)}</span>
         </div>`}
       </div>`;
   });
