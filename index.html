@@ -330,6 +330,23 @@
   .kc-tip { font-size: 0.8rem; line-height: 1.45; background: rgba(90,181,160,0.08); border: 1px solid rgba(90,181,160,0.3); border-radius: 14px; padding: 0.65rem 0.8rem; margin-top: 0.3rem; }
   .kc-tip b { color: var(--goal1); }
   .app { display: flex; flex-direction: column; }
+  header h1 { display: flex; align-items: center; gap: 0.7rem; line-height: 1.12; }
+  .greet-ico {
+    flex-shrink: 0; width: 2.9rem; height: 2.9rem; border-radius: 16px; display: grid; place-items: center; color: var(--actual);
+    background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--actual) 28%, transparent), color-mix(in srgb, var(--actual) 8%, transparent));
+    border: 1px solid color-mix(in srgb, var(--actual) 35%, var(--border));
+  }
+  .greet-ico svg { width: 1.7rem; height: 1.7rem; overflow: visible; }
+  .greet-ico.noon .rays { transform-origin: 16px 16px; animation: greetSpin 24s linear infinite; }
+  .greet-ico.morning .rays, .greet-ico.evening .rays { animation: greetPulse 3.5s ease-in-out infinite; }
+  .greet-ico.night .stars { animation: greetTwinkle 2.8s ease-in-out infinite; }
+  @keyframes greetSpin { to { transform: rotate(360deg); } }
+  @keyframes greetPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @keyframes greetTwinkle { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
+  @media (prefers-reduced-motion: reduce) { .greet-ico * { animation: none !important; } }
+  .greet-br { display: none; }
+  header .subtitle { padding-left: 3.6rem; margin-top: 0.15rem; }
+  @media (max-width: 420px) { header h1 { font-size: 1.65rem; } }
   .app > header { order: -100; }
   .goals-win {
     border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); padding: 1.1rem 1.2rem 0.7rem; margin-bottom: 1.25rem;
@@ -863,6 +880,32 @@ function saveOnboarding() {
   }
 }
 
+// Begrüßung nach Tageszeit, mit passendem Symbol in der Akzentfarbe
+const GREET_ICONS = {
+  morning: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 22h20"/><path d="M10 22a6 6 0 0 1 12 0"/><path d="M8.2 14.2l2 2M23.8 14.2l-2 2M4 18h2M26 18h2" class="rays"/><path d="M16 12V4M13 7l3-3 3 3"/><path d="M9 26h14" opacity=".5"/></svg>`,
+  noon:    `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="16" cy="16" r="5.5"/><g class="rays"><path d="M16 4v3M16 25v3M4 16h3M25 16h3M7.5 7.5l2.1 2.1M22.4 22.4l2.1 2.1M7.5 24.5l2.1-2.1M22.4 9.6l2.1-2.1"/></g></svg>`,
+  afternoon: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="13" cy="13" r="4.5"/><path d="M13 4v2M4 13h2M6.6 6.6l1.4 1.4M19.4 6.6 18 8" class="rays"/><path d="M11 25h12a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.3 1.8A3.6 3.6 0 0 0 11 25z" fill="var(--card)"/></svg>`,
+  evening: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 21h22"/><path d="M10 21a6 6 0 0 1 12 0"/><path d="M8 25h16M11 28.5h10" opacity=".55"/><path d="M16 4v8M13 9l3 3 3-3"/><path d="M9.5 13.5l1.4 1.4M22.5 13.5l-1.4 1.4" class="rays" opacity=".7"/></svg>`,
+  night:   `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21.5A9 9 0 0 1 12.5 7a9 9 0 1 0 12.3 12.3 8.9 8.9 0 0 1-3.8 2.2z"/><path d="M23 6.5v3M21.5 8h3M26.5 13v2M25.5 14h2" class="stars"/></svg>`,
+};
+function greetingNow(d = new Date()) {
+  const h = d.getHours();
+  if (h >= 5 && h < 11) return { text: 'Guten Morgen', icon: 'morning' };
+  if (h >= 11 && h < 14) return { text: 'Guten Mittag', icon: 'noon' };
+  if (h >= 14 && h < 18) return { text: 'Schönen Nachmittag', icon: 'afternoon' };
+  if (h >= 18 && h < 22) return { text: 'Guten Abend', icon: 'evening' };
+  return { text: 'Gute Nacht', icon: 'night' };
+}
+function updateGreeting() {
+  const headerEl = document.querySelector('header h1');
+  if (!headerEl || !userProfile || !userProfile.name) return;
+  const g = greetingNow();
+  headerEl.innerHTML = `<span class="greet-ico ${g.icon}">${GREET_ICONS[g.icon]}</span><span>${g.text},<br class="greet-br"> ${userProfile.name}</span>`;
+  const sub = document.querySelector('header .subtitle');
+  if (sub) sub.textContent = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+setInterval(updateGreeting, 60000);
+
 function applyProfile() {
   const cycleTab = document.querySelector('button[onclick*="cycle"]');
   const cycleContent = document.getElementById('tab-cycle');
@@ -874,9 +917,7 @@ function applyProfile() {
   }
   if (userProfile.name) {
     const headerEl = document.querySelector('header h1');
-    if (headerEl) headerEl.textContent = 'Hallo, ' + userProfile.name + '! 👋';
-    const subtitleEl = document.querySelector('header .subtitle');
-    if (subtitleEl) subtitleEl.textContent = 'Dein persönlicher Gewichts-Tracker';
+    if (headerEl) updateGreeting();
   }
 }
 
