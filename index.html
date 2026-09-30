@@ -205,6 +205,37 @@
   }
   .ms-chip input { display: none; }
   .ms-chip.on { border-color: var(--actual); color: var(--text); background: rgba(232,131,90,0.12); }
+  .menu-btn {
+    position: absolute; top: 0.1rem; right: 0; width: 2.4rem; height: 2.4rem; border-radius: 10px;
+    background: var(--card); border: 1px solid var(--border); color: var(--text); font-size: 1.15rem; cursor: pointer;
+  }
+  .menu-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 50; }
+  .menu-backdrop.open { opacity: 1; pointer-events: auto; }
+  .menu-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(320px, 86vw); z-index: 51;
+    background: var(--card); border-left: 1px solid var(--border); padding: 1.1rem 1rem;
+    transform: translateX(100%); transition: transform 0.22s ease; overflow-y: auto;
+  }
+  .menu-panel.open { transform: none; }
+  .menu-head { display: flex; justify-content: space-between; align-items: center; font-family: 'Lora', serif; font-size: 1.15rem; margin-bottom: 1.2rem; }
+  .menu-close { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: 0.3rem; }
+  .menu-section { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 0.4rem 0 0.5rem; }
+  .menu-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; cursor: pointer;
+    background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 0.9rem; margin-bottom: 0.5rem; font-size: 0.9rem;
+  }
+  .menu-item small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 0.15rem; }
+  .menu-ico { margin-right: 0.45rem; }
+  .menu-foot { font-size: 0.7rem; color: var(--muted); margin-top: 0.8rem; }
+  .switch { appearance: none; -webkit-appearance: none; width: 42px; height: 24px; border-radius: 999px; background: var(--border); position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; padding: 0; border: none; }
+  .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--text); transition: transform 0.2s; }
+  .switch:checked { background: var(--actual); }
+  .switch:checked::after { transform: translateX(18px); }
+  .month-row td { cursor: pointer; background: var(--card2); font-size: 0.8rem; padding: 0.55rem 0.5rem; user-select: none; }
+  .month-row .m-name { color: var(--text); font-weight: 500; }
+  .month-row .m-meta { color: var(--muted); font-size: 0.72rem; }
+  .month-row .m-arrow { display: inline-block; width: 1em; color: var(--muted); transition: transform 0.15s; }
+  .month-row.open .m-arrow { transform: rotate(90deg); }
   .opt-row { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; cursor: pointer; }
   .opt-row input { width: auto; accent-color: var(--actual); }
   @media (max-width: 560px) {
@@ -280,7 +311,8 @@
 </div>
 
 <div id="mainApp" style="display:none"><div class="app">
-  <header>
+  <header style="position:relative;padding-right:3rem">
+    <button class="menu-btn" onclick="openMenu()" aria-label="Menü">☰</button>
     <h1>Gewichts-Tracker</h1>
     <p class="subtitle">Trage Messungen & Events ein – die Kurven aktualisieren sich automatisch</p>
   </header>
@@ -424,15 +456,22 @@
     </div>
     <div id="goalBadges"></div>
   </div>
-
-  <div class="goals-card">
-    <h2>Optionale Funktionen</h2>
-    <label class="opt-row">
-      <input type="checkbox" id="optMeasure" onchange="toggleMeasureFeature(this.checked)">
-      📏 Körpermaße tracken (Umfänge mit Verlauf, eigenes Bild)
-    </label>
-  </div>
 </div>
+
+<!-- Menü: Platz für Zusatzfunktionen -->
+<div class="menu-backdrop" id="menuBackdrop" onclick="closeMenu()"></div>
+<aside class="menu-panel" id="menuPanel" aria-hidden="true">
+  <div class="menu-head">
+    <span>Menü</span>
+    <button class="menu-close" onclick="closeMenu()" aria-label="Schließen">✕</button>
+  </div>
+  <div class="menu-section">Zusatzfunktionen</div>
+  <label class="menu-item">
+    <span><span class="menu-ico">📏</span>Körpermaße<small>Umfänge mit Verlauf, eigenes Bild</small></span>
+    <input type="checkbox" class="switch" id="optMeasure" onchange="toggleMeasureFeature(this.checked)">
+  </label>
+  <div class="menu-foot">Die Auswahl gilt nur für dieses Gerät.</div>
+</aside>
 
 <script>
 let sb = null;
@@ -669,10 +708,75 @@ function updateStats() {
   document.getElementById('statRate').textContent = (rate >= 0 ? '-' : '+') + Math.abs(rate).toFixed(2) + ' kg';
 }
 
+function openMenu() {
+  document.getElementById('menuPanel').classList.add('open');
+  document.getElementById('menuBackdrop').classList.add('open');
+  document.getElementById('menuPanel').setAttribute('aria-hidden', 'false');
+}
+function closeMenu() {
+  document.getElementById('menuPanel').classList.remove('open');
+  document.getElementById('menuBackdrop').classList.remove('open');
+  document.getElementById('menuPanel').setAttribute('aria-hidden', 'true');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+// Einträge nach Monaten gruppiert; der neueste Monat ist offen, ältere zugeklappt
+let openMonths = null;
+function toggleMonth(key) {
+  if (openMonths.has(key)) openMonths.delete(key); else openMonths.add(key);
+  updateTable();
+}
+function updateTableGrouped(s) {
+  const tbody = document.getElementById('dataBody');
+  const months = [];
+  const byKey = {};
+  [...s].reverse().forEach(e => {
+    const k = e.date.slice(0, 7);
+    if (!byKey[k]) { byKey[k] = []; months.push(k); }
+    byKey[k].push(e);
+  });
+  if (!openMonths) openMonths = new Set([months[0]]);
+  const rowHtml = e => {
+    const idx = s.indexOf(e);
+    const prev = idx > 0 ? s[idx-1] : null;
+    const diff = prev ? (e.kg - prev.kg) : null;
+    let diffHtml = '';
+    if (diff !== null) {
+      const cls = diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : '';
+      diffHtml = `<span class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(2)}</span>`;
+    }
+    const isFirst = e.date === s[0].date;
+    return `<tr>
+      <td>${formatDate(e.date)}</td>
+      <td class="kg">${e.kg.toFixed(2)} kg</td>
+      <td>${diffHtml}</td>
+      <td>${isFirst ? '' : `<button class="btn-sm" onclick="removeEntry('${e.date}')">✕</button>`}</td>
+    </tr>`;
+  };
+  tbody.innerHTML = months.map((k, i) => {
+    const list = byKey[k];                       // neueste zuerst
+    const open = openMonths.has(k);
+    const avg = list.reduce((a, e) => a + e.kg, 0) / list.length;
+    // Veränderung im Monat: letzter Wert des Monats gegen letzten Wert des Vormonats (bzw. ersten Wert)
+    const prevMonth = months[i + 1];
+    const base = prevMonth ? byKey[prevMonth][0].kg : list[list.length - 1].kg;
+    const change = list[0].kg - base;
+    const cls = change > 0 ? 'diff-pos' : change < 0 ? 'diff-neg' : '';
+    const [y, m] = k.split('-').map(Number);
+    const name = new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+    const head = `<tr class="month-row${open ? ' open' : ''}" onclick="toggleMonth('${k}')"><td colspan="4">
+      <span class="m-arrow">▸</span><span class="m-name">${name}</span>
+      <span class="m-meta"> · ${list.length} ${list.length === 1 ? 'Messung' : 'Messungen'} · Ø ${avg.toFixed(2)} kg · </span><span class="${cls}">${change > 0 ? '+' : ''}${change.toFixed(2)}</span>
+    </td></tr>`;
+    return head + (open ? list.map(rowHtml).join('') : '');
+  }).join('');
+}
+
 function updateTable() {
   const s = sorted();
   const tbody = document.getElementById('dataBody');
   if (!s.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Noch keine Einträge</td></tr>'; return; }
+  if (s.length > 12) return updateTableGrouped(s);
   const sDesc = [...s].reverse();
   tbody.innerHTML = sDesc.map((e) => {
     const idx = s.indexOf(e);
