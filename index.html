@@ -745,7 +745,7 @@
       <div id="kcBurnSum" style="display:none;margin:0 0 1rem"></div>
       <div class="ms-chart-head"><span class="events-section-title" style="margin:0">Letzte 6 Wochen</span></div>
       <canvas id="kcChart" height="260"></canvas>
-      <div class="kc-leg"><span><i style="background:#5ab5a0"></i>deutlich unter Verbrauch</span><span><i style="background:#f0c060"></i>knapp drunter</span><span><i style="background:#e05a5a"></i>drüber</span><span><i style="background:var(--muted);opacity:0.5"></i>heute / zählt nicht</span></div>
+      <div class="kc-leg"><span><i style="background:var(--text);width:14px;height:2px;border-radius:0;vertical-align:middle"></i>Verbrauch</span><span><i style="background:#5ab5a0"></i>gegessen: deutlich drunter</span><span><i style="background:#f0c060"></i>knapp drunter</span><span><i style="background:#e05a5a"></i>drüber</span><span><i style="background:var(--muted);opacity:0.5"></i>heute / zählt nicht</span></div>
 
       <div class="events-section-title">Was bei dir funktioniert</div>
       <div id="kcInsight"></div>
@@ -2768,11 +2768,11 @@ function drawKcalChart() {
   const canvas = document.getElementById('kcChart');
   if (!canvas || !kcEnabled || activeTab !== 'kcal') return;
   const dpr = window.devicePixelRatio || 1;
-  const W = canvas.parentElement.clientWidth - 40, H = 260;
+  const W = canvas.parentElement.clientWidth - 40, H = 300;
   canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
   const days = []; for (let i = 41; i >= 0; i--) days.push(kcIsoDay(-i));
-  const ml = 36, mr = 8, mt = 10, wH = 130, gap = 26, bH = 70;
+  const ml = 40, mr = 8, mt = 18, wH = 120, gap = 34, bH = 100;
   const cW = W - ml - mr, xOf = i => ml + (i + 0.5) * cW / days.length;
   const kmap = {}, skipd = {}; kcAll().forEach(e => { kmap[e.date] = e.kcal; if (e.skip) skipd[e.date] = true; });
   const today = kcIsoDay(0);
@@ -2786,10 +2786,12 @@ function drawKcalChart() {
   if (s.length) {
     const ks = s.map(e => e.kg); let lo = Math.min(...ks) - 0.3, hi = Math.max(...ks) + 0.3;
     const yOf = v => mt + (1 - (v - lo) / (hi - lo)) * wH;
+    ctx.textAlign = 'left'; ctx.fillStyle = T.muted; ctx.fillText('Gewicht in kg', ml, mt - 7);
     ctx.textAlign = 'right';
-    for (let v = Math.ceil(lo); v <= hi; v++) {
+    const ws = hi - lo < 2.5 ? 0.5 : 1;
+    for (let v = Math.ceil(lo / ws) * ws; v <= hi; v += ws) {
       ctx.strokeStyle = T.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ml, yOf(v)); ctx.lineTo(ml + cW, yOf(v)); ctx.stroke();
-      ctx.fillStyle = T.muted; ctx.fillText(v, ml - 5, yOf(v) + 3);
+      ctx.fillStyle = T.muted; ctx.fillText(v.toLocaleString('de-DE'), ml - 5, yOf(v) + 3);
     }
     ctx.strokeStyle = T.accent; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.beginPath();
     s.forEach((e, i) => { const x = xOf(days.indexOf(e.date)); i ? ctx.lineTo(x, yOf(e.kg)) : ctx.moveTo(x, yOf(e.kg)); });
@@ -2798,7 +2800,14 @@ function drawKcalChart() {
   }
   // Kalorien-Balken
   const bTop = mt + wH + gap, kmax = Math.max(ref * 1.35, ...vals, ...days.map(d => (kcBurnFor(d) || { v: 0 }).v * 1.1), 1);
-  ctx.textAlign = 'left'; ctx.fillStyle = T.muted; ctx.fillText('kcal pro Tag', ml, bTop - 7);
+  ctx.textAlign = 'left'; ctx.fillStyle = T.muted; ctx.fillText('Gegessen (Balken) und Verbrauch (Linie) in kcal', ml, bTop - 9);
+  const step = kmax > 2400 ? 1000 : 500;
+  ctx.textAlign = 'right';
+  for (let v = 0; v <= kmax; v += step) {
+    const y = bTop + bH - v / kmax * bH;
+    ctx.strokeStyle = T.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml + cW, y); ctx.stroke();
+    ctx.fillStyle = T.muted; ctx.fillText(v >= 1000 ? (v / 1000).toLocaleString('de-DE') + 'k' : v, ml - 5, y + 3);
+  }
   const bw = Math.max(2, cW / days.length - 2);
   days.forEach((d, i) => {
     const k = kmap[d]; if (k === undefined) return;
@@ -2812,12 +2821,23 @@ function drawKcalChart() {
     // Verbrauch pro Tag als Stufenlinie über den Balken
     ctx.save(); ctx.strokeStyle = T.a(T.text,0.7); ctx.lineWidth = 1.6; ctx.beginPath();
     let on = false;
-    days.forEach((d, i) => { const b = kcBurnFor(d); if (!b) { on = false; return; }
+    let last = null, segStart = 0;
+    days.forEach((d, i) => { const b = kcBurnFor(d); if (!b || (b.std && kmap[d] === undefined)) { on = false; return; } if (!on) segStart = i; last = { i, v: b.v, s: segStart };
       const y = bTop + bH - Math.min(b.v, kmax) / kmax * bH, x0 = xOf(i) - cW / days.length / 2, x1 = x0 + cW / days.length;
       if (on) ctx.lineTo(x0, y); else ctx.moveTo(x0, y); ctx.lineTo(x1, y); on = true; });
     ctx.stroke(); ctx.restore();
-    ctx.fillStyle = T.a(T.text,0.75); ctx.textAlign = 'right';
-    ctx.fillText('Linie: Verbrauch', ml + cW, bTop - 7);
+    if (last) {
+      const y = bTop + bH - Math.min(last.v, kmax) / kmax * bH;
+      // Etikett mit Hintergrund über der Linie, damit es lesbar bleibt
+      ctx.font = 'bold 10px DM Sans,sans-serif'; ctx.textAlign = 'right';
+      // links neben dem letzten Linienstück; ist dort kein Platz, darüber
+      const t = 'Verbrauch ' + kcFmt(last.v), tw = ctx.measureText(t).width, x0 = xOf(last.s) - cW / days.length / 2 - 6;
+      const left = x0 - tw - 8 > ml && last.i - last.s < days.length * 0.5;
+      const tx = left ? x0 : ml + cW, ty = left ? y + 4 : Math.max(bTop + 4, y - 9);
+      ctx.fillStyle = T.a(T.bg || '#000', 0.85); ctx.beginPath(); ctx.roundRect ? ctx.roundRect(tx - tw - 6, ty - 10, tw + 8, 14, 4) : ctx.rect(tx - tw - 6, ty - 10, tw + 8, 14); ctx.fill();
+      ctx.fillStyle = T.text; ctx.fillText(t, tx - 2, ty);
+      ctx.font = '9.5px DM Sans,sans-serif';
+    }
   } else {
     const ty = bTop + bH - ref / kmax * bH;
     ctx.save(); ctx.strokeStyle = T.a(T.text,0.5); ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(ml, ty); ctx.lineTo(ml + cW, ty); ctx.stroke(); ctx.restore();
