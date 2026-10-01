@@ -540,6 +540,12 @@
   .acct-steps { margin: 0.4rem 0 0.2rem 1.1rem; padding: 0; font-size: 0.88rem; line-height: 1.55; }
   .acct-steps li { margin-bottom: 0.45rem; }
 /* ACCOUNT-CSS:END */
+  .kc-burn { flex-basis: 100%; white-space: nowrap; }
+  .kc-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+  .kc-cards > div { background: var(--surface2, rgba(127,127,127,.08)); border: 1px solid var(--border); border-radius: 12px; padding: 0.6rem 0.4rem; text-align: center; display: flex; flex-direction: column; gap: 0.15rem; }
+  .kc-cards b { font-size: 1.15rem; }
+  .kc-cards span { font-size: 0.72rem; color: var(--muted); }
+  .kc-cards .good b { color: #5ab5a0; } .kc-cards .bad b { color: #e05a5a; }
 </style>
 </head>
 <body>
@@ -736,9 +742,10 @@
         <button class="btn" onclick="addKcal()">Eintragen</button>
       </div>
 
+      <div id="kcBurnSum" style="display:none;margin:0 0 1rem"></div>
       <div class="ms-chart-head"><span class="events-section-title" style="margin:0">Letzte 6 Wochen</span></div>
       <canvas id="kcChart" height="260"></canvas>
-      <div class="kc-leg"><span><i style="background:#5ab5a0"></i>deutlich drunter</span><span><i style="background:#f0c060"></i>knapp drunter</span><span><i style="background:#e05a5a"></i>drüber</span><span><i style="background:var(--muted);opacity:0.5"></i>heute / zählt nicht</span></div>
+      <div class="kc-leg"><span><i style="background:#5ab5a0"></i>deutlich unter Verbrauch</span><span><i style="background:#f0c060"></i>knapp drunter</span><span><i style="background:#e05a5a"></i>drüber</span><span><i style="background:var(--muted);opacity:0.5"></i>heute / zählt nicht</span></div>
 
       <div class="events-section-title">Was bei dir funktioniert</div>
       <div id="kcInsight"></div>
@@ -2553,7 +2560,7 @@ async function removeMeasureImage() {
 // ── Optional: Kalorien ───────────────────────────────────────────────────────
 // Quellen: eigene Werte (daily_kcal) und Einträge aus dem Food Tracker (log_entries).
 // Am selben Tag zählt der Food Tracker. Nur aktiv, wenn im Menü eingeschaltet.
-let kcEnabled = false, kcManual = {}, kcFood = {}, kcManualMissing = false, kcHasFood = false, kcExc = new Set(), kcToday = null;
+let kcEnabled = false, kcBurn = {}, kcManual = {}, kcFood = {}, kcManualMissing = false, kcHasFood = false, kcExc = new Set(), kcToday = null;
 const KC_MIN_DAY = 800;   // darunter war der Tag vermutlich nicht vollständig eingetragen
 
 function toggleKcalFeature(on) {
@@ -2581,12 +2588,16 @@ function kcIsoDay(offset) { const d = new Date(); d.setDate(d.getDate() + offset
 async function loadKcal() {
   if (!sb || !kcEnabled) return;
   const today = kcIsoDay(0);
-  const [m, f, x] = await Promise.all([
+  const [m, f, x, t] = await Promise.all([
     sb.from('daily_kcal').select('date,kcal'),
     sb.from('log_entries').select('date,kcal'),
-    sb.from('exception_days').select('date')
+    sb.from('exception_days').select('date'),
+    sb.from('tdee_entries').select('date,tdee')
   ]);
   kcExc = new Set(!x.error ? (x.data || []).map(r => r.date) : []);
+  // Verbrauch aus dem Food Tracker: der morgens eingetragene Wert gilt für den Vortag
+  kcBurn = {};
+  if (!t.error) (t.data || []).forEach(r => { const d = parseDate(r.date); d.setDate(d.getDate() - 1); kcBurn[`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`] = parseFloat(r.tdee); });
   kcManualMissing = !!m.error;
   kcManual = {};
   (m.data || []).forEach(r => { kcManual[r.date] = parseFloat(r.kcal); });
@@ -2607,6 +2618,10 @@ function kcAll() {
     return { date: d, kcal, manual, skip, ignored: !manual && d in kcManual };
   });
 }
+// Verbrauch eines Tages: eingetragener Wert, sonst der Standard-Verbrauch aus dem Food Tracker
+function kcDefaultBurn() { const v = parseFloat(retrieve('default_tdee')); return v > 0 ? v : null; }
+function kcBurnFor(d) { if (kcBurn[d]) return { v: kcBurn[d], std: false }; const v = kcDefaultBurn(); return v ? { v, std: true } : null; }
+const kcHasBurn = () => Object.keys(kcBurn).length > 0 || !!kcDefaultBurn();
 function kcUsed() { return kcAll().filter(e => !e.skip); }
 // Für die Auswertung zählen nur die letzten 8 Wochen: der Verbrauch ändert sich mit dem Gewicht,
 // alte Daten würden das Bild verfälschen
@@ -2672,6 +2687,7 @@ function kcAnalyse() {
   const aW = wins.reduce((a, x) => a + x.wk, 0) / wins.length;
   return { wins, tdee: Math.round((aK - aW * 7700 / 7) / 10) * 10 };
 }
+function kcDayColor(d, k, ref) { const b = kcBurnFor(d); return kcColor(k, b ? b.v : ref); }
 function kcColor(k, tdee) { return k <= tdee - 250 ? '#5ab5a0' : k <= tdee ? '#f0c060' : '#e05a5a'; }
 const kcFmt = v => Math.round(v).toLocaleString('de-DE');
 
@@ -2713,8 +2729,23 @@ function updateKcal() {
       + `<div class="ms-edit-hint" style="text-align:left">Grundlage: ${used.length} Tage aus den letzten 8 Wochen (${formatDate(used[0].date)} bis ${formatDate(used[used.length-1].date)}), ohne Ausnahmetage und Tage unter ${kcFmt(KC_MIN_DAY)} kcal. Die Drittel ergeben sich aus deinen eigenen Werten.</div>`
       + (tdee ? `<div class="kc-tip">${buckets.every(b => b.wk <= -0.1)
           ? `In allen Bereichen hast du abgenommen. Rechnerisch liegt dein Verbrauch grob bei <b>${kcFmt(tdee)} kcal</b> am Tag.`
-          : `Rechnerisch liegt dein Verbrauch grob bei <b>${kcFmt(tdee)} kcal</b> am Tag. Darunter nimmst du ab, darüber stagniert oder steigt dein Gewicht.`}</div>` : '');
+          : `Rechnerisch liegt dein Verbrauch grob bei <b>${kcFmt(tdee)} kcal</b> am Tag. Darunter nimmst du ab, darüber stagniert oder steigt dein Gewicht.`}${(() => {
+            const ds = used.filter(e => kcBurn[e.date]); if (ds.length < 7) return '';
+            const m = Math.round(ds.reduce((a, e) => a + kcBurn[e.date], 0) / ds.length / 10) * 10;
+            return ` Im Food Tracker hast du im Schnitt <b>${kcFmt(m)} kcal</b> Verbrauch eingetragen${Math.abs(m - tdee) <= 100 ? ', das passt gut zusammen.' : m > tdee ? '. Dein Körper verbraucht also eher etwas weniger, als dort steht.' : '. Dein Körper verbraucht also eher etwas mehr, als dort steht.'}`; })()}</div>` : '');
   }
+
+  // Letzte 7 abgeschlossene Tage: gegessen, Verbrauch, Defizit
+  const sumEl = document.getElementById('kcBurnSum');
+  const wk = kcUsed().filter(e => e.date >= kcIsoDay(-7) && kcBurnFor(e.date));
+  if (kcHasBurn() && wk.length) {
+    const ae = wk.reduce((a, e) => a + e.kcal, 0) / wk.length, ab = wk.reduce((a, e) => a + kcBurnFor(e.date).v, 0) / wk.length, df = ab - ae;
+    const nStd = wk.filter(e => kcBurnFor(e.date).std).length;
+    sumEl.innerHTML = `<div class="kc-cards"><div><b>${kcFmt(ae)}</b><span>Ø gegessen</span></div><div><b>${kcFmt(ab)}</b><span>Ø Verbrauch</span></div>
+      <div class="${df >= 0 ? 'good' : 'bad'}"><b>${df >= 0 ? '−' : '+'}${kcFmt(Math.abs(df))}</b><span>${df >= 0 ? 'Ø Defizit' : 'Ø Überschuss'}</span></div></div>
+      <div class="ms-edit-hint" style="text-align:left;margin:0.35rem 0 0">Letzte 7 Tage (${wk.length} mit Werten)${nStd ? `, an ${nStd} ${nStd === 1 ? 'Tag' : 'Tagen'} mit Standard-Verbrauch` : ''}. Den Verbrauch trägst du im Food Tracker ein.</div>`;
+    sumEl.style.display = '';
+  } else sumEl.style.display = 'none';
 
   // Liste der letzten Tage
   const list = document.getElementById('kcList');
@@ -2725,8 +2756,9 @@ function updateKcal() {
       <div class="ms-entry-act"></div></div>` : '';
   list.innerHTML = (recent.length || todayRow) ? todayRow + recent.map(e => `<div class="ms-entry" style="align-items:center${e.skip ? ';opacity:0.6' : ''}">
       <div class="ms-entry-date">${formatDate(e.date)}</div>
-      <div class="ms-entry-vals"><span><b style="color:${e.skip ? 'var(--muted)' : kcColor(e.kcal, ref)}">${kcFmt(e.kcal)}</b> <span class="n">kcal</span></span>
-        <span class="n wrap">${e.skip ? e.skip + ' · zählt nicht' : e.manual ? 'von Hand' : e.ignored ? 'Food Tracker, dein Wert zählt nicht' : 'Food Tracker'}</span></div>
+      <div class="ms-entry-vals"><span><b style="color:${e.skip ? 'var(--muted)' : kcDayColor(e.date, e.kcal, ref)}">${kcFmt(e.kcal)}</b> <span class="n">kcal</span></span>
+        <span class="n wrap">${e.skip ? e.skip + ' · zählt nicht' : e.manual ? 'von Hand' : e.ignored ? 'Food Tracker, dein Wert zählt nicht' : 'Food Tracker'}</span>
+        ${(() => { const b = kcBurnFor(e.date); if (!b) return ''; const df = b.v - e.kcal; return `<span class="n kc-burn">Verbrauch ${kcFmt(b.v)}${b.std ? ' (Std.)' : ''} · <b style="color:${e.skip ? 'var(--muted)' : df >= 0 ? '#5ab5a0' : '#e05a5a'}">${df >= 0 ? '−' : '+'}${kcFmt(Math.abs(df))}</b></span>`; })()}</div>
       <div class="ms-entry-act"><button class="btn-sm kc-exc${kcExc.has(e.date) ? ' on' : ''}" title="Ausnahmetag" onclick="toggleKcExc('${e.date}')">${kcExc.has(e.date) ? 'Ausnahme ✓' : 'Ausnahme'}</button>${e.manual || e.ignored ? `<button class="btn-sm" onclick="removeKcal('${e.date}')">✕</button>` : ''}</div></div>`).join('')
     : '<div class="empty-state">Noch keine Kalorien eingetragen</div>';
   drawKcalChart();
@@ -2765,21 +2797,33 @@ function drawKcalChart() {
     const l = s[s.length-1]; ctx.fillStyle = T.accent; ctx.beginPath(); ctx.arc(xOf(days.indexOf(l.date)), yOf(l.kg), 3.5, 0, Math.PI * 2); ctx.fill();
   }
   // Kalorien-Balken
-  const bTop = mt + wH + gap, kmax = Math.max(ref * 1.35, ...vals.filter((v, i) => true), 1);
+  const bTop = mt + wH + gap, kmax = Math.max(ref * 1.35, ...vals, ...days.map(d => (kcBurnFor(d) || { v: 0 }).v * 1.1), 1);
   ctx.textAlign = 'left'; ctx.fillStyle = T.muted; ctx.fillText('kcal pro Tag', ml, bTop - 7);
   const bw = Math.max(2, cW / days.length - 2);
   days.forEach((d, i) => {
     const k = kmap[d]; if (k === undefined) return;
     const h = Math.min(k, kmax) / kmax * bH;
     const partial = d === today, faded = partial || skipd[d];
-    ctx.fillStyle = faded ? T.muted : kcColor(k, ref); ctx.globalAlpha = faded ? 0.4 : 0.85;
+    ctx.fillStyle = faded ? T.muted : kcDayColor(d, k, ref); ctx.globalAlpha = faded ? 0.4 : 0.85;
     ctx.beginPath(); ctx.roundRect ? ctx.roundRect(xOf(i) - bw/2, bTop + bH - h, bw, h, 2) : ctx.rect(xOf(i) - bw/2, bTop + bH - h, bw, h); ctx.fill();
     ctx.globalAlpha = 1;
   });
-  const ty = bTop + bH - ref / kmax * bH;
-  ctx.save(); ctx.strokeStyle = T.a(T.text,0.5); ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(ml, ty); ctx.lineTo(ml + cW, ty); ctx.stroke(); ctx.restore();
-  ctx.fillStyle = T.a(T.text,0.75); ctx.textAlign = 'right';
-  ctx.fillText((tdee ? 'Verbrauch ~' : 'Ø ') + kcFmt(ref), ml + cW, ty - 4);
+  if (kcHasBurn()) {
+    // Verbrauch pro Tag als Stufenlinie über den Balken
+    ctx.save(); ctx.strokeStyle = T.a(T.text,0.7); ctx.lineWidth = 1.6; ctx.beginPath();
+    let on = false;
+    days.forEach((d, i) => { const b = kcBurnFor(d); if (!b) { on = false; return; }
+      const y = bTop + bH - Math.min(b.v, kmax) / kmax * bH, x0 = xOf(i) - cW / days.length / 2, x1 = x0 + cW / days.length;
+      if (on) ctx.lineTo(x0, y); else ctx.moveTo(x0, y); ctx.lineTo(x1, y); on = true; });
+    ctx.stroke(); ctx.restore();
+    ctx.fillStyle = T.a(T.text,0.75); ctx.textAlign = 'right';
+    ctx.fillText('Linie: Verbrauch', ml + cW, bTop - 7);
+  } else {
+    const ty = bTop + bH - ref / kmax * bH;
+    ctx.save(); ctx.strokeStyle = T.a(T.text,0.5); ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(ml, ty); ctx.lineTo(ml + cW, ty); ctx.stroke(); ctx.restore();
+    ctx.fillStyle = T.a(T.text,0.75); ctx.textAlign = 'right';
+    ctx.fillText((tdee ? 'Verbrauch ~' : 'Ø ') + kcFmt(ref), ml + cW, ty - 4);
+  }
   ctx.fillStyle = T.muted; ctx.textAlign = 'left'; ctx.fillText(formatDate(days[0]), ml, H - 4);
   ctx.textAlign = 'right'; ctx.fillText(kcToday !== null ? 'heute (bisher)' : 'heute', ml + cW, H - 4);
 }
