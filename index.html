@@ -2826,18 +2826,6 @@ function drawKcalChart() {
       const y = bTop + bH - Math.min(b.v, kmax) / kmax * bH, x0 = xOf(i) - cW / days.length / 2, x1 = x0 + cW / days.length;
       if (on) ctx.lineTo(x0, y); else ctx.moveTo(x0, y); ctx.lineTo(x1, y); on = true; });
     ctx.stroke(); ctx.restore();
-    if (last) {
-      const y = bTop + bH - Math.min(last.v, kmax) / kmax * bH;
-      // Etikett mit Hintergrund über der Linie, damit es lesbar bleibt
-      ctx.font = 'bold 10px DM Sans,sans-serif'; ctx.textAlign = 'right';
-      // links neben dem letzten Linienstück; ist dort kein Platz, darüber
-      const t = 'Verbrauch ' + kcFmt(last.v), tw = ctx.measureText(t).width, x0 = xOf(last.s) - cW / days.length / 2 - 6;
-      const left = x0 - tw - 8 > ml && last.i - last.s < days.length * 0.5;
-      const tx = left ? x0 : ml + cW, ty = left ? y + 4 : Math.max(bTop + 4, y - 9);
-      ctx.fillStyle = T.a(T.bg || '#000', 0.85); ctx.beginPath(); ctx.roundRect ? ctx.roundRect(tx - tw - 6, ty - 10, tw + 8, 14, 4) : ctx.rect(tx - tw - 6, ty - 10, tw + 8, 14); ctx.fill();
-      ctx.fillStyle = T.text; ctx.fillText(t, tx - 2, ty);
-      ctx.font = '9.5px DM Sans,sans-serif';
-    }
   } else {
     const ty = bTop + bH - ref / kmax * bH;
     ctx.save(); ctx.strokeStyle = T.a(T.text,0.5); ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(ml, ty); ctx.lineTo(ml + cW, ty); ctx.stroke(); ctx.restore();
