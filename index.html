@@ -1802,12 +1802,12 @@ function updateGoalBadges() {
 }
 
 // Ausschnitt des Verlaufs: auf dem Handy standardmäßig 3 Monate, am Laptop alles mit Prognose
-// Zeitraum per Regler (Monate, 0 = alles) und Prognose als eigener Schalter. Handy: 3 Monate ohne Prognose, Laptop: alles mit Prognose.
+// Zeitraum per Regler (Monate, 0 = alles) und Prognose als eigener Schalter. Start: alles mit Prognose.
 const RANGES = [[1, '1 Monat'], [2, '2 Monate'], [3, '3 Monate'], [6, '6 Monate'], [12, '1 Jahr'], [0, 'Alles']];
 const lsGetC = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSetC = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
-function chartRangeIdx() { const r = parseInt(lsGetC('wt_chart_range_i'), 10); return r >= 0 && r < RANGES.length ? r : (window.innerWidth < 600 ? 2 : 5); }
-function chartProg() { const v = lsGetC('wt_chart_prog'); return v === '1' ? true : v === '0' ? false : window.innerWidth >= 600; }
+function chartRangeIdx() { const r = parseInt(lsGetC('wt_chart_range_i'), 10); return r >= 0 && r < RANGES.length ? r : 5; }
+function chartProg() { const v = lsGetC('wt_chart_prog'); return v !== '0'; }
 function setChartRange(i) { lsSetC('wt_chart_range_i', String(i)); drawChart(); }
 function setChartProg(on) { lsSetC('wt_chart_prog', on ? '1' : '0'); drawChart(); }
 function drawChart() {
