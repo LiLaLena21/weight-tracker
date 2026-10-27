@@ -541,6 +541,9 @@
   .acct-steps li { margin-bottom: 0.45rem; }
 /* ACCOUNT-CSS:END */
   .kc-burn { flex-basis: 100%; white-space: nowrap; }
+  .kc-plan { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.6rem 0; }
+  .kc-plan > div { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; background: var(--card2, rgba(127,127,127,.08)); border: 1px solid var(--border); border-radius: 12px; padding: 0.65rem 0.8rem; }
+  .kc-plan span { font-size: 0.85rem; color: var(--muted); } .kc-plan b { font-size: 1rem; white-space: nowrap; }
   .kc-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
   .kc-cards > div { background: var(--surface2, rgba(127,127,127,.08)); border: 1px solid var(--border); border-radius: 12px; padding: 0.6rem 0.4rem; text-align: center; display: flex; flex-direction: column; gap: 0.15rem; }
   .kc-cards b { font-size: 1.15rem; }
@@ -2718,21 +2721,34 @@ function updateKcal() {
       const b = wins.filter(p => p.kcal >= lo && p.kcal < hi);
       if (b.length >= 2) buckets.push({ lo, hi, n: b.length, wk: b.reduce((a, p) => a + p.wk, 0) / b.length });
     }
+    // Bereiche nur zeigen, wenn die Werte weit genug auseinander liegen, dass sie etwas aussagen
+    const spread = ks[Math.floor(0.9 * (ks.length - 1))] - ks[Math.floor(0.1 * (ks.length - 1))];
+    const showBuckets = edges.length === 2 && spread >= 200 && buckets.length >= 2;
     const maxAbs = Math.max(...buckets.map(b => Math.abs(b.wk)), 0.1);
-    ins.innerHTML = buckets.map(b => {
+    const bucketHtml = showBuckets ? buckets.map(b => {
       const label = b.lo === -Infinity ? 'Ø unter ' + kcFmt(b.hi) : b.hi === Infinity ? 'Ø über ' + kcFmt(b.lo) : 'Ø ' + kcFmt(b.lo) + '–' + kcFmt(b.hi);
       const col = b.wk <= -0.3 ? '#5ab5a0' : b.wk <= -0.1 ? '#9ec27a' : b.wk < 0.1 ? '#f0c060' : '#e05a5a';
       return `<div class="kc-bucket"><div class="bk">${label}<small>${b.n} ${b.n === 1 ? 'Zeitraum' : 'Zeiträume'}</small></div>
         <div class="bar"><i style="width:${Math.max(4, Math.abs(b.wk) / maxAbs * 100).toFixed(0)}%;background:${col}"></i></div>
         <div class="bv" style="color:${col}">${b.wk > 0.05 ? '+' : b.wk < -0.05 ? '−' : '±'}${deNum(Math.abs(b.wk))} kg</div></div>`;
-    }).join('') + `<div class="ms-edit-hint" style="text-align:left">Gewichtsveränderung pro Woche, je nachdem wie viel du im Schnitt gegessen hast. Gerechnet wird mit 7-Tage-Zeiträumen, die sich überschneiden.</div>`
-      + `<div class="ms-edit-hint" style="text-align:left">Grundlage: ${used.length} Tage aus den letzten 8 Wochen (${formatDate(used[0].date)} bis ${formatDate(used[used.length-1].date)}), ohne Ausnahmetage und Tage unter ${kcFmt(KC_MIN_DAY)} kcal. Die Drittel ergeben sich aus deinen eigenen Werten.</div>`
-      + (tdee ? `<div class="kc-tip">${buckets.every(b => b.wk <= -0.1)
-          ? `In allen Bereichen hast du abgenommen. Rechnerisch liegt dein Verbrauch grob bei <b>${kcFmt(tdee)} kcal</b> am Tag.`
-          : `Rechnerisch liegt dein Verbrauch grob bei <b>${kcFmt(tdee)} kcal</b> am Tag. Darunter nimmst du ab, darüber stagniert oder steigt dein Gewicht.`}${(() => {
-            const ds = used.filter(e => kcBurn[e.date]); if (ds.length < 7) return '';
-            const m = Math.round(ds.reduce((a, e) => a + kcBurn[e.date], 0) / ds.length / 10) * 10;
-            return ` Im Food Tracker hast du im Schnitt <b>${kcFmt(m)} kcal</b> Verbrauch eingetragen${Math.abs(m - tdee) <= 100 ? ', das passt gut zusammen.' : m > tdee ? '. Dein Körper verbraucht also eher etwas weniger, als dort steht.' : '. Dein Körper verbraucht also eher etwas mehr, als dort steht.'}`; })()}</div>` : '');
+    }).join('') + `<div class="ms-edit-hint" style="text-align:left">Gewichtsveränderung pro Woche, je nachdem wie viel du im Schnitt gegessen hast.</div>` : '';
+    // Wie viel essen für welches Tempo: aus dem gemessenen Verbrauch (7.700 kcal ≈ 1 kg)
+    const r10 = v => Math.round(v / 10) * 10;
+    const recent = used.slice(-14), avgNow = recent.reduce((a, e) => a + e.kcal, 0) / recent.length;
+    const plan = tdee ? [['Gewicht halten', 0], ['0,25 kg pro Woche abnehmen', 0.25], ['0,5 kg pro Woche abnehmen', 0.5]]
+      .map(([l, r]) => [l, r10(tdee - r * 7700 / 7)]).filter(([, k]) => k >= 1000) : [];
+    const nowRate = tdee ? (tdee - avgNow) * 7 / 7700 : 0;
+    const planHtml = tdee ? `<div class="kc-plan">${plan.map(([l, k]) => `<div><span>${l}</span><b>ca. ${kcFmt(k)} kcal</b></div>`).join('')}</div>
+      <div class="kc-tip">Zuletzt hast du im Schnitt <b>${kcFmt(avgNow)} kcal</b> am Tag gegessen. Das ergibt rechnerisch ${nowRate >= 0.05 ? `etwa <b>${deNum(nowRate)} kg weniger pro Woche</b>` : nowRate <= -0.05 ? `etwa <b>${deNum(-nowRate)} kg mehr pro Woche</b>` : 'ein stabiles Gewicht'}.</div>` : '';
+    const burnNote = (() => {
+      if (!tdee) return '';
+      const ds = used.filter(e => kcBurn[e.date]); if (ds.length < 7) return '';
+      const m = Math.round(ds.reduce((a, e) => a + kcBurn[e.date], 0) / ds.length / 10) * 10;
+      return ` Im Food Tracker hast du im Schnitt ${kcFmt(m)} kcal Verbrauch eingetragen${Math.abs(m - tdee) <= 100 ? ', das passt gut zusammen.' : m > tdee ? '. Dein Körper verbraucht also eher etwas weniger, als dort steht.' : '. Dein Körper verbraucht also eher etwas mehr, als dort steht.'}`;
+    })();
+    ins.innerHTML = (tdee ? `<div class="ms-edit-hint" style="text-align:left;margin-top:0">Dein Verbrauch liegt laut Gewichtsverlauf bei etwa <b>${kcFmt(tdee)} kcal</b> am Tag.${burnNote} Daraus ergibt sich:</div>` : '')
+      + planHtml + bucketHtml
+      + `<div class="ms-edit-hint" style="text-align:left">Grundlage: ${used.length} Tage aus den letzten 8 Wochen (${formatDate(used[0].date)} bis ${formatDate(used[used.length-1].date)}), ohne Ausnahmetage und Tage unter ${kcFmt(KC_MIN_DAY)} kcal. Die Werte passen sich an, wenn sich dein Verbrauch ändert.</div>`;
   }
 
   // Letzte 7 abgeschlossene Tage: gegessen, Verbrauch, Defizit
