@@ -546,6 +546,13 @@
   #rngSlider { width: 100%; accent-color: var(--accent); margin: 0.2rem 0 0; }
   .chart-ctl-ticks { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); padding: 0 2px; }
   .chart-prog { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--muted); margin-top: 0.3rem; cursor: pointer; }
+  .ms-total { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; background: var(--card2, rgba(127,127,127,.08)); border: 1px solid var(--border); border-radius: 14px; padding: 0.8rem 1rem; margin: 0.4rem 0 0.7rem; }
+  .ms-total b { font-family: 'Lora', serif; font-size: 1.5rem; color: #5ab5a0; } .ms-total span { font-size: 0.85rem; color: var(--muted); }
+  .ms-prog { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: center; gap: 0.7rem; padding: 0.45rem 0.2rem; border-bottom: 1px solid var(--border); }
+  .ms-prog:last-child { border-bottom: none; }
+  .ms-prog-name { font-size: 0.9rem; display: flex; flex-direction: column; } .ms-prog-name small { font-size: 0.72rem; color: var(--muted); }
+  .ms-prog-bar { height: 8px; border-radius: 4px; background: rgba(127,127,127,.15); overflow: hidden; } .ms-prog-bar i { display: block; height: 100%; border-radius: 4px; }
+  .ms-prog-val { font-family: 'Lora', serif; font-size: 1rem; min-width: 3.2rem; text-align: right; }
   .kc-plan { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.6rem 0; }
   .kc-plan > div { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; background: var(--card2, rgba(127,127,127,.08)); border: 1px solid var(--border); border-radius: 12px; padding: 0.65rem 0.8rem; }
   .kc-plan span { font-size: 0.85rem; color: var(--muted); } .kc-plan b { font-size: 1rem; white-space: nowrap; }
@@ -734,11 +741,8 @@
         </div>
       </div>
 
-      <div class="ms-chart-head">
-        <span class="events-section-title" style="margin:0">Verlauf</span>
-        <select id="msChartField" onchange="drawMeasureChart()"></select>
-      </div>
-      <canvas id="msChart" height="180"></canvas>
+      <div class="events-section-title">Fortschritt seit Start</div>
+      <div id="msProgress"></div>
 
       <div class="events-section-title">Alle Messungen</div>
       <div id="msTable" class="ms-list"></div>
@@ -2202,16 +2206,9 @@ function msPickChange(key, on) {
 
 function msBuildInputs() {
   msRenderPick();
-  const prevChart = document.getElementById('msChartField').value;
   document.getElementById('msInputs').innerHTML = msActive().map(f =>
     `<div class="input-group"><label>${f.label}</label><input type="number" id="ms_${f.key}" step="0.5" min="10" max="250" placeholder="cm"></div>`
   ).join('');
-  const act = msActive();
-  document.getElementById('msChartField').innerHTML = act.map(f =>
-    `<option value="${f.key}">${f.label}</option>`).join('');
-  const pref = ['waist', 'belly'].find(k => act.some(f => f.key === k));
-  const want = act.some(f => f.key === prevChart) ? prevChart : (pref || act[0].key);
-  document.getElementById('msChartField').value = want;
   if (!document.getElementById('msDate').value) document.getElementById('msDate').value = new Date().toISOString().slice(0,10);
 }
 
@@ -2387,7 +2384,23 @@ function updateMeasure() {
         <div class="ms-entry-act"><button class="btn-sm" onclick="editMeasurement('${m.date}')">✎</button><button class="btn-sm" onclick="removeMeasurement('${m.date}')">✕</button></div></div>`;
     }).join('');
   }
-  drawMeasureChart();
+  msRenderProgress();
+}
+
+// Fortschritt aller Maße auf einen Blick: Start, jetzt, Unterschied als Balken, oben die Summe
+function msRenderProgress() {
+  const el = document.getElementById('msProgress'); if (!el) return;
+  const rows = msActive().map(f => { const s = msSeries(f.key); return s.length > 1 ? { f, a: s[0].v, b: s[s.length - 1].v, d: s[s.length - 1].v - s[0].v } : null; }).filter(Boolean);
+  if (!rows.length) { el.innerHTML = `<div class="empty-state">Sobald es eine zweite Messung gibt, siehst du hier, was sich getan hat.</div>`; return; }
+  const total = rows.reduce((a, r) => a + r.d, 0), maxAbs = Math.max(...rows.map(r => Math.abs(r.d)), 1);
+  const since = formatDate(measurements[0].date);
+  el.innerHTML = `<div class="ms-total"><b>${total < 0 ? '−' : '+'}${msFmt(Math.abs(total))} cm</b><span>${total < 0 ? 'weniger' : 'mehr'} insgesamt seit ${since}</span></div>`
+    + rows.sort((x, y) => x.d - y.d).map(r => {
+      const col = r.d < 0 ? '#5ab5a0' : r.d > 0 ? '#e05a5a' : 'var(--muted)';
+      return `<div class="ms-prog"><div class="ms-prog-name">${r.f.label}<small>${msFmt(r.a)} → ${msFmt(r.b)} cm</small></div>
+        <div class="ms-prog-bar"><i style="width:${Math.max(3, Math.abs(r.d) / maxAbs * 100).toFixed(0)}%;background:${col}"></i></div>
+        <div class="ms-prog-val" style="color:${col}">${r.d < 0 ? '−' : r.d > 0 ? '+' : '±'}${msFmt(Math.abs(r.d))}</div></div>`;
+    }).join('');
 }
 
 function drawMeasureChart() {
