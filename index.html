@@ -618,7 +618,7 @@
     </div>
     <div class="hero-chips">
       <div class="chip"><div class="chip-val" id="statTotal">–</div><div class="chip-lbl">seit Start</div></div>
-      <div class="chip"><div class="chip-val" id="statRate">–</div><div class="chip-lbl">pro Monat</div></div>
+      <div class="chip"><div class="chip-val" id="statRate">–</div><div class="chip-lbl">pro Monat<br><span style="opacity:.7">letzte 8 Wochen</span></div></div>
       <div class="chip"><div class="chip-val" id="statTotalDays">–</div><div class="chip-lbl">Tage dabei</div></div>
     </div>
   </div>
@@ -1458,9 +1458,20 @@ function addMonths(dateObj, months) {
 function sorted() { return [...entries].sort((a,b) => a.date.localeCompare(b.date)); }
 function sortedEvents() { return [...events].sort((a,b) => a.date.localeCompare(b.date)); }
 
+// Tempo in kg pro Monat (positiv = Abnahme): Trendlinie über die letzten 8 Wochen,
+// damit es zeigt, wie es gerade läuft, und nicht der Schnitt seit der ersten Messung.
+// Zu wenig Daten in dem Zeitraum: Schnitt über alles wie früher.
+const RATE_WINDOW_DAYS = 56;
 function calcRate() {
   const s = sorted();
   if (s.length < 2) return 0;
+  const last = parseDate(s[s.length-1].date);
+  const pts = s.map(e => [(parseDate(e.date) - last) / 86400000, e.kg]).filter(([x]) => x >= -RATE_WINDOW_DAYS);
+  if (pts.length >= 7 && -pts[0][0] >= 14) {
+    const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
+    const slope = pts.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0) / pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0);
+    return -slope * 30;
+  }
   const days = daysBetween(s[0].date, s[s.length-1].date);
   return days > 0 ? (s[0].kg - s[s.length-1].kg) / days * 30 : 0;
 }
