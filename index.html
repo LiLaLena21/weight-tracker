@@ -541,6 +541,11 @@
   .acct-steps li { margin-bottom: 0.45rem; }
 /* ACCOUNT-CSS:END */
   .kc-burn { flex-basis: 100%; white-space: nowrap; }
+  .chart-ctl { margin: 0 0 0.8rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .chart-ctl-row { display: flex; justify-content: space-between; font-size: 0.85rem; } .chart-ctl-lbl { color: var(--muted); }
+  #rngSlider { width: 100%; accent-color: var(--accent); margin: 0.2rem 0 0; }
+  .chart-ctl-ticks { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); padding: 0 2px; }
+  .chart-prog { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--muted); margin-top: 0.3rem; cursor: pointer; }
   .kc-plan { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.6rem 0; }
   .kc-plan > div { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; background: var(--card2, rgba(127,127,127,.08)); border: 1px solid var(--border); border-radius: 12px; padding: 0.65rem 0.8rem; }
   .kc-plan span { font-size: 0.85rem; color: var(--muted); } .kc-plan b { font-size: 1rem; white-space: nowrap; }
@@ -633,7 +638,12 @@
 
   <div class="chart-card" data-win="chart">
     <div class="card-title">Verlauf</div>
-    <div class="seg chart-range" style="margin:0 0 0.7rem"><button id="rng3m" onclick="setChartRange('3m')">3 Monate</button><button id="rngAll" onclick="setChartRange('all')">Gesamt &amp; Prognose</button></div>
+    <div class="chart-ctl">
+      <div class="chart-ctl-row"><span class="chart-ctl-lbl">Zeitraum</span><b id="rngLbl"></b></div>
+      <input type="range" id="rngSlider" min="0" max="5" step="1" oninput="setChartRange(+this.value)" aria-label="Zeitraum">
+      <div class="chart-ctl-ticks"><span>1 M</span><span>2 M</span><span>3 M</span><span>6 M</span><span>1 J</span><span>Alles</span></div>
+      <label class="chart-prog"><input type="checkbox" class="switch" id="progTg" onchange="setChartProg(this.checked)"> Prognose zum Ziel anzeigen</label>
+    </div>
     <div class="legend">
       <div class="legend-item"><div class="leg-line" style="background:var(--actual)"></div>Tatsächlich</div>
       <div class="legend-item">
@@ -1792,8 +1802,14 @@ function updateGoalBadges() {
 }
 
 // Ausschnitt des Verlaufs: auf dem Handy standardmäßig 3 Monate, am Laptop alles mit Prognose
-function chartRange() { let r = null; try { r = localStorage.getItem('wt_chart_range'); } catch (e) {} return r === '3m' || r === 'all' ? r : (window.innerWidth < 600 ? '3m' : 'all'); }
-function setChartRange(r) { try { localStorage.setItem('wt_chart_range', r); } catch (e) {} drawChart(); }
+// Zeitraum per Regler (Monate, 0 = alles) und Prognose als eigener Schalter. Handy: 3 Monate ohne Prognose, Laptop: alles mit Prognose.
+const RANGES = [[1, '1 Monat'], [2, '2 Monate'], [3, '3 Monate'], [6, '6 Monate'], [12, '1 Jahr'], [0, 'Alles']];
+const lsGetC = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSetC = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+function chartRangeIdx() { const r = parseInt(lsGetC('wt_chart_range_i'), 10); return r >= 0 && r < RANGES.length ? r : (window.innerWidth < 600 ? 2 : 5); }
+function chartProg() { const v = lsGetC('wt_chart_prog'); return v === '1' ? true : v === '0' ? false : window.innerWidth >= 600; }
+function setChartRange(i) { lsSetC('wt_chart_range_i', String(i)); drawChart(); }
+function setChartProg(on) { lsSetC('wt_chart_prog', on ? '1' : '0'); drawChart(); }
 function drawChart() {
   const canvas = document.getElementById('chart');
   const dpr = window.devicePixelRatio || 1;
@@ -1801,10 +1817,10 @@ function drawChart() {
   const small = W < 500;                       // Handy: größere Schrift, etwas höher
   const H = small ? 330 : 300;
   const fs = small ? 11.5 : 10;
-  const range = chartRange();
-  document.getElementById('rng3m').classList.toggle('on', range === '3m');
-  document.getElementById('rngAll').classList.toggle('on', range === 'all');
-  document.querySelectorAll('.legend .legend-item').forEach((el, i) => { if (i === 1 || i === 2) el.style.display = range === 'all' ? '' : 'none'; });
+  const ri = chartRangeIdx(), months = RANGES[ri][0], showProg = chartProg();
+  document.getElementById('rngSlider').value = ri; document.getElementById('rngLbl').textContent = RANGES[ri][1] + (showProg ? ' + Prognose' : '');
+  document.getElementById('progTg').checked = showProg;
+  document.querySelectorAll('.legend .legend-item').forEach((el, i) => { if (i === 1 || i === 2) el.style.display = showProg ? '' : 'none'; });
   canvas.width = W * dpr; canvas.height = H * dpr;
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
@@ -1813,7 +1829,8 @@ function drawChart() {
   const sAll = sorted();
   if (sAll.length < 1) return;
   // 3 Monate: nur die letzten 90 Tage (plus ein Punkt davor, damit die Linie am Rand anfängt), ohne Prognose
-  const zoomFrom = range === '3m' ? new Date(parseDate(sAll[sAll.length-1].date).getTime() - 90 * 86400000) : null;
+  let zoomFrom = months ? new Date(parseDate(sAll[sAll.length-1].date).getTime() - months * 30.44 * 86400000) : null;
+  if (zoomFrom && zoomFrom <= parseDate(sAll[0].date)) zoomFrom = null;   // Zeitraum größer als die Daten: alles zeigen
   let s = sAll;
   if (zoomFrom) { const i = sAll.findIndex(e => parseDate(e.date) >= zoomFrom); s = i > 0 ? sAll.slice(i - 1) : sAll; }
 
@@ -1834,14 +1851,13 @@ function drawChart() {
   const evDates = sortedEvents().map(e => parseDate(e.date));
   const trendEnd = rate > 0 ? endDate(last.kg, minGoal, rate) : lastDate;
   const proEnd = endDate(last.kg, minGoal, getConservativeRate());
-  const maxDate = zoomFrom ? new Date(lastDate.getTime() + 4 * 86400000)
-    : new Date(Math.max(trendEnd, proEnd, lastDate, ...evDates));
-  if (!zoomFrom) maxDate.setDate(maxDate.getDate() + 20);
+  const maxDate = showProg ? new Date(Math.max(trendEnd, proEnd, lastDate, ...evDates)) : new Date(lastDate.getTime() + 4 * 86400000);
+  if (showProg) maxDate.setDate(maxDate.getDate() + 20);
 
   const totalDays = (maxDate - firstDate) / 86400000;
   const allKg = s.map(e => e.kg);
-  const maxKg = Math.max(...allKg) + (zoomFrom ? 0.6 : 1);
-  const minKg = zoomFrom ? Math.min(...allKg) - 0.6 : Math.min(...allKg, g2, g1) - 1;
+  const maxKg = Math.max(...allKg) + (showProg ? 1 : 0.6);
+  const minKg = showProg ? Math.min(...allKg, g2, g1) - 1 : Math.min(...allKg) - 0.6;
   const kgRange = maxKg - minKg;
 
   const ml = small ? 40 : 52, mr = small ? 10 : 16, mt = activeTab === 'event' ? 50 : 20, mb = 40;
@@ -1878,15 +1894,16 @@ function drawChart() {
   // Nur so viele Monate beschriften, wie nebeneinander passen (auf dem Handy z.B. jeden 3.)
   const pxPerMonth = cW * 30.44 / totalDays;
   const mStep = [1,2,3,4,6,12].find(n => n * pxPerMonth >= 46) || 12;
-  if (zoomFrom) {
-    // im 3-Monats-Ausschnitt: Monatsanfänge mit Namen, dazwischen der 15.
+  const shortSpan = totalDays <= 100;
+  if (shortSpan) {
+    // kurzer Ausschnitt: Monatsanfänge mit Namen, dazwischen der 15.
     for (let d = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1); d <= maxDate; d.setDate(d.getDate() < 15 ? 15 : 1), d.getDate() === 1 && d.setMonth(d.getMonth() + 1)) {
       const x = xOf(d);
       if (x > ml + 14 && x < ml + cW - 14) ctx.fillText(d.getDate() === 1 ? mnames[d.getMonth()] : '15.', x, H-mb+16);
     }
   }
   let md = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
-  while (!zoomFrom && md <= maxDate) {
+  while (!shortSpan && md <= maxDate) {
     md.setMonth(md.getMonth()+1);
     if (md.getMonth() % mStep !== 0) continue;
     const x = xOf(md);
@@ -1918,8 +1935,8 @@ function drawChart() {
   }
 
   const actualPts = s.map(e => [xOfStr(e.date), yOf(e.kg)]);
-  const prognosePts = zoomFrom ? [] : buildPrognose(last.kg, lastDate, minGoal, getConservativeRate());
-  const trendPts = !zoomFrom && rate > 0 ? buildPrognose(last.kg, lastDate, minGoal, rate) : [];
+  const prognosePts = showProg ? buildPrognose(last.kg, lastDate, minGoal, getConservativeRate()) : [];
+  const trendPts = showProg && rate > 0 ? buildPrognose(last.kg, lastDate, minGoal, rate) : [];
 
   fillUnder(prognosePts, '#5ab5a0');
   fillUnder(trendPts, '#e05a8a');
