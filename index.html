@@ -633,6 +633,7 @@
 
   <div class="chart-card" data-win="chart">
     <div class="card-title">Verlauf</div>
+    <div class="seg chart-range" style="margin:0 0 0.7rem"><button id="rng3m" onclick="setChartRange('3m')">3 Monate</button><button id="rngAll" onclick="setChartRange('all')">Gesamt &amp; Prognose</button></div>
     <div class="legend">
       <div class="legend-item"><div class="leg-line" style="background:var(--actual)"></div>Tatsächlich</div>
       <div class="legend-item">
@@ -1790,25 +1791,38 @@ function updateGoalBadges() {
   document.getElementById('goalBadges').innerHTML = html;
 }
 
+// Ausschnitt des Verlaufs: auf dem Handy standardmäßig 3 Monate, am Laptop alles mit Prognose
+function chartRange() { let r = null; try { r = localStorage.getItem('wt_chart_range'); } catch (e) {} return r === '3m' || r === 'all' ? r : (window.innerWidth < 600 ? '3m' : 'all'); }
+function setChartRange(r) { try { localStorage.setItem('wt_chart_range', r); } catch (e) {} drawChart(); }
 function drawChart() {
   const canvas = document.getElementById('chart');
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.parentElement.clientWidth - 32;
-  const H = 300;
+  const small = W < 500;                       // Handy: größere Schrift, etwas höher
+  const H = small ? 330 : 300;
+  const fs = small ? 11.5 : 10;
+  const range = chartRange();
+  document.getElementById('rng3m').classList.toggle('on', range === '3m');
+  document.getElementById('rngAll').classList.toggle('on', range === 'all');
+  document.querySelectorAll('.legend .legend-item').forEach((el, i) => { if (i === 1 || i === 2) el.style.display = range === 'all' ? '' : 'none'; });
   canvas.width = W * dpr; canvas.height = H * dpr;
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const s = sorted();
-  if (s.length < 1) return;
+  const sAll = sorted();
+  if (sAll.length < 1) return;
+  // 3 Monate: nur die letzten 90 Tage (plus ein Punkt davor, damit die Linie am Rand anfängt), ohne Prognose
+  const zoomFrom = range === '3m' ? new Date(parseDate(sAll[sAll.length-1].date).getTime() - 90 * 86400000) : null;
+  let s = sAll;
+  if (zoomFrom) { const i = sAll.findIndex(e => parseDate(e.date) >= zoomFrom); s = i > 0 ? sAll.slice(i - 1) : sAll; }
 
   const g1 = parseFloat(document.getElementById('goal1Input').value) || 75;
   const g2 = parseFloat(document.getElementById('goal2Input').value) || 69;
   const last = s[s.length-1], first = s[0];
   const rate = calcRate();
   const minGoal = Math.min(g1, g2);
-  const firstDate = parseDate(first.date);
+  const firstDate = zoomFrom || parseDate(first.date);
   const lastDate = parseDate(last.date);
 
   function endDate(kg, target, ratePerMonth) {
@@ -1820,16 +1834,17 @@ function drawChart() {
   const evDates = sortedEvents().map(e => parseDate(e.date));
   const trendEnd = rate > 0 ? endDate(last.kg, minGoal, rate) : lastDate;
   const proEnd = endDate(last.kg, minGoal, getConservativeRate());
-  const maxDate = new Date(Math.max(trendEnd, proEnd, lastDate, ...evDates));
-  maxDate.setDate(maxDate.getDate() + 20);
+  const maxDate = zoomFrom ? new Date(lastDate.getTime() + 4 * 86400000)
+    : new Date(Math.max(trendEnd, proEnd, lastDate, ...evDates));
+  if (!zoomFrom) maxDate.setDate(maxDate.getDate() + 20);
 
   const totalDays = (maxDate - firstDate) / 86400000;
   const allKg = s.map(e => e.kg);
-  const maxKg = Math.max(...allKg) + 1;
-  const minKg = Math.min(...allKg, g2, g1) - 1;
+  const maxKg = Math.max(...allKg) + (zoomFrom ? 0.6 : 1);
+  const minKg = zoomFrom ? Math.min(...allKg) - 0.6 : Math.min(...allKg, g2, g1) - 1;
   const kgRange = maxKg - minKg;
 
-  const ml = 52, mr = 16, mt = activeTab === 'event' ? 50 : 20, mb = 40;
+  const ml = small ? 40 : 52, mr = small ? 10 : 16, mt = activeTab === 'event' ? 50 : 20, mb = 40;
   const cW = W - ml - mr, cH = H - mt - mb;
 
   function xOf(d) { return ml + ((d - firstDate) / 86400000 / totalDays) * cW; }
@@ -1838,12 +1853,12 @@ function drawChart() {
 
   ctx.clearRect(0, 0, W, H);
 
-  for (let k = Math.ceil(minKg); k <= Math.floor(maxKg); k++) {
-    if (k % 2 !== 0 && kgRange > 10) continue;
+  const kStep = kgRange > 10 ? 2 : kgRange < 3.5 ? 0.5 : 1;
+  for (let k = Math.ceil(minKg / kStep) * kStep; k <= maxKg; k += kStep) {
     ctx.strokeStyle = T.border; ctx.lineWidth = 1; ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(ml, yOf(k)); ctx.lineTo(ml+cW, yOf(k)); ctx.stroke();
-    ctx.fillStyle = T.muted; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(k, ml-6, yOf(k)+4);
+    ctx.fillStyle = T.muted; ctx.font = fs + 'px DM Sans,sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(String(k).replace('.', ','), ml-6, yOf(k)+4);
   }
 
   [g1, g2].forEach((g, i) => {
@@ -1858,17 +1873,24 @@ function drawChart() {
   ctx.beginPath(); ctx.moveTo(ml,mt); ctx.lineTo(ml,mt+cH); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(ml,mt+cH); ctx.lineTo(ml+cW,mt+cH); ctx.stroke();
 
-  ctx.fillStyle = T.muted; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = T.muted; ctx.font = fs + 'px DM Sans,sans-serif'; ctx.textAlign = 'center';
   const mnames = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
   // Nur so viele Monate beschriften, wie nebeneinander passen (auf dem Handy z.B. jeden 3.)
   const pxPerMonth = cW * 30.44 / totalDays;
   const mStep = [1,2,3,4,6,12].find(n => n * pxPerMonth >= 46) || 12;
+  if (zoomFrom) {
+    // im 3-Monats-Ausschnitt: Monatsanfänge mit Namen, dazwischen der 15.
+    for (let d = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1); d <= maxDate; d.setDate(d.getDate() < 15 ? 15 : 1), d.getDate() === 1 && d.setMonth(d.getMonth() + 1)) {
+      const x = xOf(d);
+      if (x > ml + 14 && x < ml + cW - 14) ctx.fillText(d.getDate() === 1 ? mnames[d.getMonth()] : '15.', x, H-mb+16);
+    }
+  }
   let md = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
-  while (md <= maxDate) {
+  while (!zoomFrom && md <= maxDate) {
     md.setMonth(md.getMonth()+1);
     if (md.getMonth() % mStep !== 0) continue;
     const x = xOf(md);
-    if (x > ml+16 && x < ml+cW-16) ctx.fillText(mnames[md.getMonth()]+' '+String(md.getFullYear()).slice(2), x, H-mb+14);
+    if (x > ml+16 && x < ml+cW-16) ctx.fillText(mnames[md.getMonth()]+' '+String(md.getFullYear()).slice(2), x, H-mb+16);
   }
 
   function dashedLine(pts, color, dash) {
@@ -1896,8 +1918,8 @@ function drawChart() {
   }
 
   const actualPts = s.map(e => [xOfStr(e.date), yOf(e.kg)]);
-  const prognosePts = buildPrognose(last.kg, lastDate, minGoal, getConservativeRate());
-  const trendPts = rate > 0 ? buildPrognose(last.kg, lastDate, minGoal, rate) : [];
+  const prognosePts = zoomFrom ? [] : buildPrognose(last.kg, lastDate, minGoal, getConservativeRate());
+  const trendPts = !zoomFrom && rate > 0 ? buildPrognose(last.kg, lastDate, minGoal, rate) : [];
 
   fillUnder(prognosePts, '#5ab5a0');
   fillUnder(trendPts, '#e05a8a');
@@ -1921,7 +1943,7 @@ function drawChart() {
   }
 
   // Punkte nur bei wenigen Messungen; sonst reicht die Linie. Letzter Wert hervorgehoben.
-  const dense = s.length > 40;
+  const dense = s.length > (small ? 25 : 40);
   s.forEach((e,i) => {
     const [x,y] = actualPts[i];
     const isLast = i === s.length-1;
@@ -1934,7 +1956,7 @@ function drawChart() {
     }
     if (i===0 || isLast) {
       const txt = e.kg.toFixed(1).replace('.', ',')+' kg';
-      ctx.save(); ctx.font = '600 10.5px DM Sans,sans-serif';
+      ctx.save(); ctx.font = '600 ' + (fs + 0.5) + 'px DM Sans,sans-serif';
       const tw = ctx.measureText(txt).width + 12;
       const lx = Math.min(Math.max(x, ml + tw/2), ml + cW - tw/2), ly = y - 18;
       ctx.fillStyle = T.a(T.card,0.92); ctx.strokeStyle = T.a(T.accent,0.6); ctx.lineWidth = 1;
@@ -1944,16 +1966,20 @@ function drawChart() {
     }
   });
 
-  function endDot(pts, color, label) {
+  function endDot(pts, color, label, below) {
     if (pts.length < 2) return;
     const [x,y] = pts[pts.length-1];
     ctx.save(); ctx.fillStyle=T.card; ctx.strokeStyle=color; ctx.lineWidth=2.5;
     ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=color; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='center';
-    ctx.fillText(label, x, y-9); ctx.restore();
+    ctx.fillStyle=color; ctx.font='600 ' + fs + 'px DM Sans,sans-serif';
+    const tw = ctx.measureText(label).width;
+    if (below) { ctx.textAlign = 'right'; ctx.fillText(label, x - 10, y + 4); }   // links neben dem Punkt, stößt nicht an die Monatsnamen
+    else { ctx.textAlign = x + tw / 2 > ml + cW ? 'right' : 'center'; ctx.fillText(label, ctx.textAlign === 'right' ? ml + cW : x, y - 10); }
+    ctx.restore();
   }
-  endDot(trendPts, '#e05a8a', minGoal+' kg');
-  endDot(prognosePts, '#5ab5a0', minGoal+' kg');
+  const mshort = d => ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'][d.getMonth()] + ' ' + String(d.getFullYear()).slice(2);
+  if (trendPts.length > 1) endDot(trendPts, '#e05a8a', mshort(addMonths(lastDate, (last.kg - minGoal) / rate)), false);
+  if (prognosePts.length > 1) endDot(prognosePts, '#5ab5a0', mshort(addMonths(lastDate, (last.kg - minGoal) / getConservativeRate())), true);
 
   // Events: vergangene als Punkt auf der echten Kurve, kommende mit Trend-Punkt (konservativ nur dezent).
   // Namen nur, wenn Platz ist, damit sich nichts überlagert.
