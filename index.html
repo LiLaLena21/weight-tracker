@@ -561,6 +561,8 @@
   .kc-cards b { font-size: 1.15rem; }
   .kc-cards span { font-size: 0.72rem; color: var(--muted); }
   .kc-cards .good b { color: #5ab5a0; } .kc-cards .bad b { color: #e05a5a; }
+  .wet-row td { opacity: 0.5; }
+  .wet-tag { font-size: 0.66rem; color: var(--muted); margin-top: 0.1rem; }
 </style>
 </head>
 <body>
@@ -1411,11 +1413,13 @@ async function loadAll() {
   if (!sb) return;
   showLoading(true);
   try {
-    const [eRes, evRes, cRes] = await Promise.all([
+    const [eRes, evRes, cRes, xRes] = await Promise.all([
       sb.from('weight_entries').select('*').order('date', {ascending:true}),
       sb.from('events').select('*').order('date', {ascending:true}),
-      sb.from('cycles').select('*').order('start_date', {ascending:true})
+      sb.from('cycles').select('*').order('start_date', {ascending:true}),
+      sb.from('exception_days').select('date')
     ]);
+    if (xRes && !xRes.error) kcExc = new Set((xRes.data || []).map(r => r.date));
     entries = (eRes.data||[]).map(r => ({date:r.date, kg:parseFloat(r.kg)}));
     events  = (evRes.data||[]).map(r => ({date:r.date, name:r.name, id:r.id}));
     cycles  = (cRes.data||[]).map(r => ({start:r.start_date, name:r.name, id:r.id}));
@@ -1428,11 +1432,13 @@ async function loadAllThenSeedIfEmpty() {
   if (!sb) return;
   showLoading(true);
   try {
-    const [eRes, evRes, cRes] = await Promise.all([
+    const [eRes, evRes, cRes, xRes] = await Promise.all([
       sb.from('weight_entries').select('*').order('date', {ascending:true}),
       sb.from('events').select('*').order('date', {ascending:true}),
-      sb.from('cycles').select('*').order('start_date', {ascending:true})
+      sb.from('cycles').select('*').order('start_date', {ascending:true}),
+      sb.from('exception_days').select('date')
     ]);
+    if (xRes && !xRes.error) kcExc = new Set((xRes.data || []).map(r => r.date));
     entries = (eRes.data||[]).map(r => ({date:r.date, kg:parseFloat(r.kg)}));
     events  = (evRes.data||[]).map(r => ({date:r.date, name:r.name, id:r.id}));
     cycles  = (cRes.data||[]).map(r => ({start:r.start_date, name:r.name, id:r.id}));
@@ -1638,6 +1644,7 @@ function updateTableGrouped(s) {
     byKey[k].push(e);
   });
   if (!openMonths) openMonths = new Set([months[0]]);
+  const water = waterDates();
   const rowHtml = e => {
     const idx = s.indexOf(e);
     const prev = idx > 0 ? s[idx-1] : null;
@@ -1648,8 +1655,9 @@ function updateTableGrouped(s) {
       diffHtml = `<span class="${cls}">${diff > 0 ? '+' : '−'}${deNum(Math.abs(diff), 2)}</span>`;
     }
     const isFirst = e.date === s[0].date;
-    return `<tr>
-      <td>${formatDate(e.date)}</td>
+    const wet = water.has(e.date);
+    return `<tr${wet ? ' class="wet-row"' : ''}>
+      <td>${formatDate(e.date)}${wet ? '<div class="wet-tag">Wasser nach Ausnahme</div>' : ''}</td>
       <td class="kg">${deNum(e.kg, 2)} kg</td>
       <td>${diffHtml}</td>
       <td>${isFirst ? '' : `<button class="btn-sm" onclick="removeEntry('${e.date}')">✕</button>`}</td>
@@ -1658,7 +1666,8 @@ function updateTableGrouped(s) {
   tbody.innerHTML = months.map((k, i) => {
     const list = byKey[k];                       // neueste zuerst
     const open = openMonths.has(k);
-    const avg = list.reduce((a, e) => a + e.kg, 0) / list.length;
+    const dry = list.filter(e => !water.has(e.date)), avgList = dry.length ? dry : list;
+    const avg = avgList.reduce((a, e) => a + e.kg, 0) / avgList.length;
     // Veränderung im Monat: letzter Wert des Monats gegen letzten Wert des Vormonats (bzw. ersten Wert)
     const prevMonth = months[i + 1];
     const base = prevMonth ? byKey[prevMonth][0].kg : list[list.length - 1].kg;
@@ -1680,6 +1689,7 @@ function updateTable() {
   if (!s.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Noch keine Einträge</td></tr>'; return; }
   if (s.length > 12) return updateTableGrouped(s);
   const sDesc = [...s].reverse();
+  const water = waterDates();
   tbody.innerHTML = sDesc.map((e) => {
     const idx = s.indexOf(e);
     const prev = idx > 0 ? s[idx-1] : null;
@@ -1691,8 +1701,9 @@ function updateTable() {
       diffHtml = `<span class="${cls}">${diff > 0 ? '+' : '−'}${deNum(Math.abs(diff), 2)}</span>`;
     }
     const isFirst = e.date === s[0].date;
-    return `<tr>
-      <td>${formatDate(e.date)}</td>
+    const wet = water.has(e.date);
+    return `<tr${wet ? ' class="wet-row"' : ''}>
+      <td>${formatDate(e.date)}${wet ? '<div class="wet-tag">Wasser nach Ausnahme</div>' : ''}</td>
       <td class="kg">${deNum(e.kg, 2)} kg</td>
       <td>${diffHtml}</td>
       <td>${isFirst ? '' : `<button class="btn-sm" onclick="removeEntry('${e.date}')">✕</button>`}</td>
@@ -1947,20 +1958,33 @@ function drawChart() {
   if (actualPts.length >= 2) {
     const baseY = yOf(minKg);
     ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = T.accent;
-    ctx.beginPath(); ctx.moveTo(actualPts[0][0], baseY);
-    actualPts.forEach(p => ctx.lineTo(p[0],p[1]));
-    ctx.lineTo(actualPts[actualPts.length-1][0], baseY);
+    const wd = waterDates(), fillPts = actualPts.filter((p, i) => !wd.has(s[i].date) || i === s.length - 1);
+    ctx.beginPath(); ctx.moveTo(fillPts[0][0], baseY);
+    fillPts.forEach(p => ctx.lineTo(p[0],p[1]));
+    ctx.lineTo(fillPts[fillPts.length-1][0], baseY);
     ctx.closePath(); ctx.fill(); ctx.restore();
   }
 
   dashedLine(prognosePts, '#5ab5a0');
   dashedLine(trendPts, '#e05a8a');
 
+  // Wasser nach Ausnahmetagen: blass anzeigen, die Hauptlinie läuft daran vorbei
+  const water = waterDates();
+  const isWet = i => water.has(s[i].date) && i !== s.length - 1;
   if (actualPts.length >= 2) {
+    if (s.some((e, i) => isWet(i))) {
+      ctx.save(); ctx.strokeStyle = T.a(T.accent, 0.35); ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); actualPts.forEach((p,i) => i===0 ? ctx.moveTo(p[0],p[1]) : ctx.lineTo(p[0],p[1]));
+      ctx.stroke(); ctx.restore();
+    }
+    const dryPts = actualPts.filter((p, i) => !isWet(i));
     ctx.save(); ctx.strokeStyle = T.accent; ctx.lineWidth = 2.5;
     ctx.setLineDash([]); ctx.lineJoin='round'; ctx.lineCap='round';
-    ctx.beginPath(); actualPts.forEach((p,i) => i===0 ? ctx.moveTo(p[0],p[1]) : ctx.lineTo(p[0],p[1]));
+    ctx.beginPath(); dryPts.forEach((p,i) => i===0 ? ctx.moveTo(p[0],p[1]) : ctx.lineTo(p[0],p[1]));
     ctx.stroke(); ctx.restore();
+    s.forEach((e, i) => { if (!isWet(i)) return; const [x, y] = actualPts[i];
+      ctx.save(); ctx.fillStyle = T.card; ctx.strokeStyle = T.a(T.accent, 0.45); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore(); });
   }
 
   // Punkte nur bei wenigen Messungen; sonst reicht die Linie. Letzter Wert hervorgehoben.
@@ -2060,11 +2084,35 @@ function addCycle() {
 }
 function removeCycle(id) { dbRemoveCycle(id); }
 
+// Nach einem Ausnahmetag (z. B. Sushi-Abend) lagert der Körper ein paar Tage Wasser ein.
+// Diese Messungen zählen nicht für Zyklus-Tabelle und Monats-Ø, bis das Gewicht wieder
+// höchstens 0,3 kg über dem Wert vor der Ausnahme liegt (spätestens nach 5 Tagen).
+const WATER_TOL = 0.3, WATER_MAX_DAYS = 5;
+function waterDates() {
+  const out = new Set();
+  if (!kcExc || !kcExc.size) return out;
+  const s = sorted();
+  [...kcExc].sort().forEach(x => {
+    const before = s.filter(e => e.date <= x);
+    if (!before.length) return;
+    const base = before[before.length - 1].kg, x0 = parseDate(x);
+    for (const e of s) {
+      if (e.date <= x) continue;
+      if ((parseDate(e.date) - x0) / 86400000 > WATER_MAX_DAYS) break;
+      if (e.kg <= base + WATER_TOL) break;
+      out.add(e.date);
+    }
+  });
+  return out;
+}
+
 function cycleWeekAvg(cycleStart, weekNum) {
   const start = parseDate(cycleStart);
   const dayStart = (weekNum - 1) * 7;
   const dayEnd = weekNum * 7 - 1;
+  const water = waterDates();
   const weekEntries = entries.filter(e => {
+    if (water.has(e.date)) return false;
     const days = (parseDate(e.date) - start) / 86400000;
     return days >= dayStart && days <= dayEnd;
   });
@@ -2114,7 +2162,7 @@ function updateCycleTable() {
     html += cell(avg, prevAvg, true);
   });
   html += '</tr></tbody></table>';
-  html += '<div style="font-size:0.7rem;color:var(--muted);margin-top:0.5rem">Werte in kg, darunter die Veränderung zum Vormonat.</div>';
+  html += '<div style="font-size:0.7rem;color:var(--muted);margin-top:0.5rem">Werte in kg, darunter die Veränderung zum Vormonat. Messungen mit Wasser nach einem Ausnahmetag zählen nicht mit.</div>';
   el.innerHTML = html;
 }
 
@@ -2654,7 +2702,7 @@ function renderKcalSource() {
 async function toggleKcExc(date) {
   if (kcExc.has(date)) { await sb.from('exception_days').delete().eq('date', date); kcExc.delete(date); }
   else { await sb.from('exception_days').insert({ user_id: Acct.uid, date }); kcExc.add(date); }
-  updateKcal();
+  render();
 }
 function kcIsoDay(offset) { const d = new Date(); d.setDate(d.getDate() + offset); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
