@@ -1484,7 +1484,7 @@ function sortedEvents() { return [...events].sort((a,b) => a.date.localeCompare(
 // Zu wenig Daten in dem Zeitraum: Schnitt über alles wie früher.
 const RATE_WINDOW_DAYS = 56;
 function calcRate() {
-  const s = sorted();
+  const s = drySorted();
   if (s.length < 2) return 0;
   const last = parseDate(s[s.length-1].date);
   const pts = s.map(e => [(parseDate(e.date) - last) / 86400000, e.kg]).filter(([x]) => x >= -RATE_WINDOW_DAYS);
@@ -2105,6 +2105,9 @@ function waterDates() {
   });
   return out;
 }
+
+// Messungen ohne Wasser nach Ausnahmetagen (für Trend und Verbrauchsschätzung)
+function drySorted() { const w = waterDates(), s = sorted(); const d = s.filter(e => !w.has(e.date)); return d.length >= 2 ? d : s; }
 
 function cycleWeekAvg(cycleStart, weekNum) {
   const start = parseDate(cycleStart);
@@ -2768,7 +2771,7 @@ async function removeKcal(date) {
 
 // Gewicht pro Tag, linear zwischen den Messungen interpoliert
 function kcDailyWeights() {
-  const s = sorted();
+  const s = drySorted();
   if (s.length < 2) return {};
   const byDay = {}; const d0 = parseDate(s[0].date), d1 = parseDate(s[s.length-1].date);
   let j = 0;
