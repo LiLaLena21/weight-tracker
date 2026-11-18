@@ -2115,8 +2115,12 @@ function drySorted() { const w = waterDates(), s = sorted(); const d = s.filter(
 
 function cycleWeekAvg(cycleStart, weekNum) {
   const start = parseDate(cycleStart);
+  // Woche 4 läuft bis zum nächsten Zyklusstart (bzw. bis heute), damit längere Zyklen nichts verlieren.
+  // Kein Tag zählt doppelt: alles endet spätestens am Tag vor dem nächsten Zyklus.
+  const next = cycles.map(c => c.start).filter(d => d > cycleStart).sort()[0];
+  const nextDays = next ? (parseDate(next) - start) / 86400000 : Infinity;
   const dayStart = (weekNum - 1) * 7;
-  const dayEnd = weekNum * 7 - 1;
+  const dayEnd = Math.min(weekNum === 4 ? Infinity : weekNum * 7 - 1, nextDays - 1);
   const water = waterDates();
   const weekEntries = entries.filter(e => {
     if (water.has(e.date)) return false;
@@ -2169,7 +2173,7 @@ function updateCycleTable() {
     html += cell(avg, prevAvg, true);
   });
   html += '</tr></tbody></table>';
-  html += '<div style="font-size:0.7rem;color:var(--muted);margin-top:0.5rem">Werte in kg, darunter die Veränderung zum Vormonat. Messungen mit Wasser nach einem Ausnahmetag zählen nicht mit.</div>';
+  html += '<div style="font-size:0.7rem;color:var(--muted);margin-top:0.5rem">Werte in kg, darunter die Veränderung zum Vormonat. Woche 4 läuft bis zum nächsten Zyklusstart. Messungen mit Wasser nach einem Ausnahmetag zählen nicht mit.</div>';
   el.innerHTML = html;
 }
 
