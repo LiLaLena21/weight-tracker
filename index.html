@@ -1668,14 +1668,17 @@ function updateTableGrouped(s) {
     const open = openMonths.has(k);
     const dry = list.filter(e => !water.has(e.date)), avgList = dry.length ? dry : list;
     const avg = avgList.reduce((a, e) => a + e.kg, 0) / avgList.length;
-    // Veränderung im Monat: letzter Wert des Monats gegen letzten Wert des Vormonats (bzw. ersten Wert)
-    // Wasser nach Ausnahmetagen zählt nicht: letzter normaler Wert des Monats gegen den des Vormonats
+    // Wasser nach Ausnahmetagen zählt nicht mit
     const dryOf = l => l.filter(e => !water.has(e.date));
     const prevMonth = months[i + 1];
     const prevDry = prevMonth ? dryOf(byKey[prevMonth]) : [];
-    const cur = dry.length ? dry[0] : list[0];
-    const base = prevMonth ? (prevDry.length ? prevDry[0] : byKey[prevMonth][0]).kg : (dry.length ? dry[dry.length - 1] : list[list.length - 1]).kg;
-    const change = cur.kg - base;
+    // Veränderung: Monatsdurchschnitt gegen Durchschnitt des Vormonats (einzelne Tage schwanken zu stark).
+    // Erster Monat ohne Vormonat: letzter gegen ersten Wert.
+    const avgOfList = l => l.reduce((a, e) => a + e.kg, 0) / l.length;
+    const first = dry.length ? dry : list;
+    const change = prevMonth
+      ? avg - avgOfList(prevDry.length ? prevDry : byKey[prevMonth])
+      : first[0].kg - first[first.length - 1].kg;
     const cls = change > 0 ? 'diff-pos' : change < 0 ? 'diff-neg' : '';
     const [y, m] = k.split('-').map(Number);
     const name = new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
