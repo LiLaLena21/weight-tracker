@@ -2944,8 +2944,16 @@ function drawKcalChart() {
       ctx.strokeStyle = T.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ml, yOf(v)); ctx.lineTo(ml + cW, yOf(v)); ctx.stroke();
       ctx.fillStyle = T.muted; ctx.fillText(v.toLocaleString('de-DE'), ml - 5, yOf(v) + 3);
     }
+    // Wasser nach Ausnahmetagen: blass gestrichelt, die Hauptlinie läuft daran vorbei (wie im großen Diagramm)
+    const wet = waterDates(), isWet = (e, i) => wet.has(e.date) && i !== s.length - 1;
+    const px = e => [xOf(days.indexOf(e.date)), yOf(e.kg)];
+    if (s.some(isWet)) {
+      ctx.save(); ctx.strokeStyle = T.a(T.accent, 0.35); ctx.lineWidth = 1.4; ctx.setLineDash([3, 3]); ctx.beginPath();
+      s.forEach((e, i) => { const [x, y] = px(e); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.stroke(); ctx.restore();
+    }
     ctx.strokeStyle = T.accent; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.beginPath();
-    s.forEach((e, i) => { const x = xOf(days.indexOf(e.date)); i ? ctx.lineTo(x, yOf(e.kg)) : ctx.moveTo(x, yOf(e.kg)); });
+    s.filter((e, i) => !isWet(e, i)).forEach((e, i) => { const [x, y] = px(e); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
     ctx.stroke();
     const l = s[s.length-1]; ctx.fillStyle = T.accent; ctx.beginPath(); ctx.arc(xOf(days.indexOf(l.date)), yOf(l.kg), 3.5, 0, Math.PI * 2); ctx.fill();
   }
